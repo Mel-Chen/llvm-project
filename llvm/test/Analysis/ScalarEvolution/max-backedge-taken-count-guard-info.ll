@@ -1720,3 +1720,78 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+define void @test_guard_less_than_non_const(ptr nocapture %a, i64 %iv_start, i64 %n) {
+; CHECK-LABEL: 'test_guard_less_than_non_const'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_less_than_non_const
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %for.body ], [ %iv_start, %entry ]
+; CHECK-NEXT:    --> {%iv_start,+,1}<nuw><nsw><%for.body> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:    --> {((4 * %iv_start) + %a),+,4}<%for.body> U: full-set S: full-set Exits: (-4 + (4 * %n) + %a) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %iv_start),+,1}<nuw><nsw><%for.body> U: full-set S: full-set Exits: %n LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_non_const
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %iv_start) + %n)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * %iv_start) + %n)
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %iv_start) + %n)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %cmp3 = icmp slt i64 %iv_start, %n
+  br i1 %cmp3, label %for.body, label %exit
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ %iv_start, %entry ]
+  %idx = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 1, ptr %idx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @test_guard_less_than_non_const_sext(ptr nocapture %a, i32 %iv_start, i32 %n) {
+; CHECK-LABEL: 'test_guard_less_than_non_const_sext'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_less_than_non_const_sext
+; CHECK-NEXT:    %iv.start = sext i32 %iv_start to i64
+; CHECK-NEXT:    --> (sext i32 %iv_start to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    %wide.trip.count = sext i32 %n to i64
+; CHECK-NEXT:    --> (sext i32 %n to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %for.body ], [ %iv.start, %for.body.preheader ]
+; CHECK-NEXT:    --> {(sext i32 %iv_start to i64),+,1}<nuw><nsw><%for.body> U: [-2147483648,-9223372036854775808) S: [-2147483648,-9223372036854775808) Exits: (-1 + (sext i32 %n to i64))<nsw> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:    --> {((4 * (sext i32 %iv_start to i64))<nsw> + %a),+,4}<nw><%for.body> U: full-set S: full-set Exits: (-4 + (4 * (sext i32 %n to i64))<nsw> + %a) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + (sext i32 %iv_start to i64))<nsw>,+,1}<nuw><nsw><%for.body> U: [-2147483647,-9223372036854775808) S: [-2147483647,-9223372036854775808) Exits: (sext i32 %n to i64) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_non_const_sext
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (sext i32 %n to i64) + (-1 * (sext i32 %iv_start to i64))<nsw>)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (sext i32 %n to i64) + (-1 * (sext i32 %iv_start to i64))<nsw>)
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (sext i32 %n to i64) + (-1 * (sext i32 %iv_start to i64))<nsw>)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %cmp3 = icmp slt i32 %iv_start, %n
+  br i1 %cmp3, label %for.body.preheader, label %exit
+
+for.body.preheader:
+  %iv.start = sext i32 %iv_start to i64
+  %wide.trip.count = sext i32 %n to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ %iv.start, %for.body.preheader ]
+  %idx = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 1, ptr %idx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
