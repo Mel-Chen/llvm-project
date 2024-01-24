@@ -1732,7 +1732,7 @@ define void @test_guard_less_than_non_const(ptr nocapture %a, i64 %iv_start, i64
 ; CHECK-NEXT:    --> {(1 + %iv_start),+,1}<nuw><nsw><%for.body> U: full-set S: full-set Exits: %n LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_non_const
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %iv_start) + %n)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 9223372036854775807
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * %iv_start) + %n)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %iv_start) + %n)
 ; CHECK-NEXT:   Predicates:

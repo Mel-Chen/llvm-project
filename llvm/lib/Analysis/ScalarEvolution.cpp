@@ -249,6 +249,10 @@ static cl::opt<bool> UseContextForNoWrapFlagInference(
     cl::desc("Infer nuw/nsw flags using context where suitable"),
     cl::init(true));
 
+static cl::opt<bool> AllowTranspositionLoopGuard(
+    "scalar-evolution-allow-transposition", cl::Hidden,
+    cl::desc("Allow transposition in applyLoopGuard"), cl::init(true));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -14957,6 +14961,22 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
 
+    // E.g.
+    //       LHS s< RHS
+    //   --> LHS - RHS s< RHS - RHS
+    //   --> LHS - RHS s< 0
+    const SCEV *Transposition = nullptr;
+    if (AllowTranspositionLoopGuard && isa<SCEVUnknown>(LHS) &&
+        isa<SCEVUnknown>(RHS) && CmpInst::isSigned(Predicate)) {
+      const SCEV *NewLHS = getMinusSCEV(LHS, RHS);
+      // Avoid uncomputable pointer subtraction
+      if (!isa<SCEVCouldNotCompute>(NewLHS)) {
+        Transposition = RHS;
+        LHS = NewLHS;
+        RHS = getMinusSCEV(RHS, Transposition); // Zero
+      }
+    }
+
     // Check for a condition of the form (-C1 + X < C2).  InstCombine will
     // create this form when combining two checks of the form (X u< C2 + C1) and
     // (X >=u C1).
@@ -15273,8 +15293,13 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
         break;
       }
 
-      if (To)
+      if (To) {
+        if (Transposition) {
+          From = getAddExpr(From, Transposition);
+          To = getAddExpr(To, Transposition);
+        }
         AddRewrite(From, FromRewritten, To);
+      }
     }
   };
 
