@@ -7062,7 +7062,8 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
       IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
   ICmpInst::Predicate GEPred =
       IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-  const SCEV *End = AddRec->evaluateAtIteration(MaxBECount, *this);
+  const SCEV *End = applyLoopGuards(
+      AddRec->evaluateAtIteration(MaxBECount, *this), AddRec->getLoop());
 
   // We know that there is no self-wrap. Let's take Start and End values and
   // look at all intermediate values V1, V2, ..., Vn that IndVar takes during
@@ -7090,11 +7091,17 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
   if (IsWrappedSet)
     return ConstantRange::getFull(BitWidth);
 
+  // After applying loop guards, Start will be "((-1 + (-2147483647 smax
+  // %n))<nsw> smin %iv_start)", and End will be "(-1 + (-2147483647 smax
+  // %n))<nsw>". In isKnownViaNonRecursiveReasoning, we can effectively use
+  // IsKnownPredicateViaMinOrMax to prove that Start is less than or equal to
+  // End when AddRec is incremented, or Start is greater than or equal to End
+  // when AddRec is decremented.
   if (isKnownPositive(Step) &&
-      isKnownPredicateViaConstantRanges(LEPred, Start, End))
+      isKnownViaNonRecursiveReasoning(LEPred, Start, End))
     return RangeBetween;
   if (isKnownNegative(Step) &&
-           isKnownPredicateViaConstantRanges(GEPred, Start, End))
+      isKnownViaNonRecursiveReasoning(GEPred, Start, End))
     return RangeBetween;
   return ConstantRange::getFull(BitWidth);
 }
@@ -15399,6 +15406,40 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
         const auto *LHS = getSCEV(Cmp->getOperand(0));
         const auto *RHS = getSCEV(Cmp->getOperand(1));
         CollectCondition(Predicate, LHS, RHS, RewriteMap);
+
+        // When the guard condition is of the following form,
+        //   Unknown_LHS s> Unknown_RHS or Unknown_LHS s< Unknown_RHS
+        // Two additional conditions will be added:
+        //   Unknown_LHS s> Min(Data_Type), Max(Data_Type) s> Unknown_RHS
+        //   or
+        //   Unknown_LHS s< Max(Data_Type), Min(Data_Type) s< Unknown_RHS
+        // Note that for pointer types, we will not add additional conditions,
+        // as this may not be a meaningful comparison.
+        // TODO: May worked on unsigned predicate too.
+        if (CmpInst::isStrictPredicate(Predicate) &&
+            CmpInst::isSigned(Predicate) && isa<SCEVUnknown>(LHS) &&
+            isa<SCEVUnknown>(RHS) && !LHS->getType()->isPointerTy()) {
+
+          unsigned BitWidth = getTypeSizeInBits(LHS->getType());
+          APInt MaxAP = APInt::getSignedMaxValue(BitWidth);
+          APInt MinAP = APInt::getSignedMinValue(BitWidth);
+          const SCEV *MaxScev = getConstant(MaxAP);
+          const SCEV *MinScev = getConstant(MinAP);
+
+          switch (Predicate) {
+          case CmpInst::ICMP_SLT:
+            CollectCondition(Predicate, LHS, MaxScev, RewriteMap);
+            CollectCondition(Predicate, MinScev, RHS, RewriteMap);
+            break;
+          case CmpInst::ICMP_SGT:
+            CollectCondition(Predicate, LHS, MinScev, RewriteMap);
+            CollectCondition(Predicate, MaxScev, RHS, RewriteMap);
+            break;
+          default:
+            break;
+          }
+        }
+
         continue;
       }
 
