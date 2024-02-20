@@ -46,7 +46,7 @@ define void @test_guard_less_than_non_const_sext(ptr nocapture %a, i32 %iv_start
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
 ; CHECK-NEXT:    --> {((4 * (sext i32 %iv_start to i64))<nsw> + %a),+,4}<nw><%for.body> U: full-set S: full-set Exits: (-4 + (4 * (sext i32 %n to i64))<nsw> + %a) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %1 = trunc i64 %indvars.iv to i32
-; CHECK-NEXT:    --> {%iv_start,+,1}<%for.body> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%iv_start,+,1}<%for.body> U: full-set S: [-2147483648,2147483647) Exits: (-1 + %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %indvars.iv.next = add nsw i64 %indvars.iv, 1
 ; CHECK-NEXT:    --> {(1 + (sext i32 %iv_start to i64))<nsw>,+,1}<nsw><%for.body> U: [-2147483647,-9223372036854775808) S: [-2147483647,-9223372036854775808) Exits: (sext i32 %n to i64) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_non_const_sext

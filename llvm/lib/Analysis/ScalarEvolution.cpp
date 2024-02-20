@@ -6769,13 +6769,25 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         }
       }
 
+      // **Only for the case** Force set the max BE count to unsigned max - 1
+      if (!isa<SCEVCouldNotCompute>(MaxBEScev))
+        MaxBEScev = getConstant(MaxBEScev->getType(),
+                                4294967295 - 1); // 32bits usigned max - 1
+
       // Now try symbolic BE count and more powerful methods.
       if (UseExpensiveRangeSharpening) {
         const SCEV *SymbolicMaxBECount =
             getSymbolicMaxBackedgeTakenCount(AddRec->getLoop());
+        // In addition to using getTypeSizeInBits(MaxBEScev->getType()) to
+        // check, we can also additionally use range info. to check whether
+        // BECount will actually exceed the target bitwidth.
+        // **Only for the case** Skip nw flag. We can expand
+        // proveNoWrapViaConstantRanges to prove the truncated AddRec is nw by
+        // MaxBEScev in the future.
         if (!isa<SCEVCouldNotCompute>(SymbolicMaxBECount) &&
-            getTypeSizeInBits(MaxBEScev->getType()) <= BitWidth &&
-            AddRec->hasNoSelfWrap()) {
+            (getTypeSizeInBits(MaxBEScev->getType()) <= BitWidth ||
+             getUnsignedRange(MaxBEScev).getActiveBits() <= BitWidth) &&
+            (true || AddRec->hasNoSelfWrap())) {
           auto RangeFromAffineNew = getRangeForAffineNoSelfWrappingAR(
               AddRec, SymbolicMaxBECount, BitWidth, SignHint);
           ConservativeResult =
@@ -7035,8 +7047,9 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
     const SCEVAddRecExpr *AddRec, const SCEV *MaxBECount, unsigned BitWidth,
     ScalarEvolution::RangeSignHint SignHint) {
   assert(AddRec->isAffine() && "Non-affine AddRecs are not suppored!\n");
-  assert(AddRec->hasNoSelfWrap() &&
-         "This only works for non-self-wrapping AddRecs!");
+  // **Only for the case** Skip the nw check.
+  //assert(AddRec->hasNoSelfWrap() &&
+  //       "This only works for non-self-wrapping AddRecs!");
   const bool IsSigned = SignHint == HINT_RANGE_SIGNED;
   const SCEV *Step = AddRec->getStepRecurrence(*this);
   // Only deal with constant step to save compile time.
@@ -7047,10 +7060,12 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
   // iteration count estimate, and we might infer nw from some exit for which we
   // do not know max exit count (or any other side reasoning).
   // TODO: Turn into assert at some point.
-  if (getTypeSizeInBits(MaxBECount->getType()) >
-      getTypeSizeInBits(AddRec->getType()))
-    return ConstantRange::getFull(BitWidth);
-  MaxBECount = getNoopOrZeroExtend(MaxBECount, AddRec->getType());
+  // **Only for the case** Skip the zero extend. For the truncated case, the
+  // size of MaxBECount is 64, and truncated AddRec is 32.
+  //if (getTypeSizeInBits(MaxBECount->getType()) >
+  //    getTypeSizeInBits(AddRec->getType()))
+  //  return ConstantRange::getFull(BitWidth);
+  //MaxBECount = getNoopOrZeroExtend(MaxBECount, AddRec->getType());
   const SCEV *RangeWidth = getMinusOne(AddRec->getType());
   const SCEV *StepAbs = getUMinExpr(Step, getNegativeSCEV(Step));
   const SCEV *MaxItersWithoutWrap = getUDivExpr(RangeWidth, StepAbs);
