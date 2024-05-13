@@ -321,6 +321,62 @@ for.end:
   ret float %.sroa.speculated
 }
 
+define float @fminimum(ptr %a, i64 %n, float %start) {
+; CHECK-LABEL: @fminimum
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
+; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
+; CHECK: %[[MIN1:.*]] = call <vscale x 8 x float> @llvm.minimum.nxv8f32(<vscale x 8 x float> %[[VEC_PHI1:.*]], <vscale x 8 x float> %[[LOAD1]])
+; CHECK: %[[MIN2:.*]] = call <vscale x 8 x float> @llvm.minimum.nxv8f32(<vscale x 8 x float> %[[VEC_PHI2:.*]], <vscale x 8 x float> %[[LOAD2]])
+; CHECK: middle.block:
+; CHECK-NEXT: %[[RDX_MINMAX:.*]] = call <vscale x 8 x float> @llvm.minimum.nxv8f32(<vscale x 8 x float> %[[MIN1]], <vscale x 8 x float> %[[MIN2]])
+; CHECK-NEXT: call float @llvm.vector.reduce.fminimum.nxv8f32(<vscale x 8 x float> %[[RDX_MINMAX]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi float [ %start, %entry ], [ %min, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
+  %0 = load float, ptr %arrayidx, align 4
+  %min = tail call float @llvm.minimum.f32(float %rdx, float %0)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret float %min
+}
+
+define float @fmaximum(ptr %a, i64 %n, float %start) {
+; CHECK-LABEL: @fmaximum
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
+; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
+; CHECK: %[[MAX1:.*]] = call <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float> %[[VEC_PHI1:.*]], <vscale x 8 x float> %[[LOAD1]])
+; CHECK: %[[MAX2:.*]] = call <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float> %[[VEC_PHI2:.*]], <vscale x 8 x float> %[[LOAD2]])
+; CHECK: middle.block:
+; CHECK-NEXT: %[[RDX_MINMAX:.*]] = call <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float> %[[MAX1]], <vscale x 8 x float> %[[MAX2]])
+; CHECK-NEXT: call float @llvm.vector.reduce.fmaximum.nxv8f32(<vscale x 8 x float> %[[RDX_MINMAX]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi float [ %start, %entry ], [ %max, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
+  %0 = load float, ptr %arrayidx, align 4
+  %max = tail call float @llvm.maximum.f32(float %rdx, float %0)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret float %max
+}
+
 ; Reduction cannot be vectorized
 
 ; MUL
@@ -427,6 +483,8 @@ for.end:
   ret float %muladd
 }
 
+declare float @llvm.minimum.f32(float, float)
+declare float @llvm.maximum.f32(float, float)
 declare float @llvm.fmuladd.f32(float, float, float)
 
 attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

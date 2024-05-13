@@ -322,6 +322,8 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FMinimum:
+    case RecurKind::FMaximum:
     case RecurKind::FMulAdd:
     case RecurKind::IAnyOf:
     case RecurKind::FAnyOf:
