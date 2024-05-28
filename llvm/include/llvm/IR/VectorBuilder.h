@@ -48,7 +48,7 @@ private:
   ElementCount StaticVectorLength;
 
   // Get mask/evl value handles for the current configuration.
-  Value &requestMask();
+  Value &requestMask(VectorType *MaskTy);
   Value &requestEVL();
 
   void handleError(const char *ErrorMsg) const;

@@ -35,11 +35,13 @@ Value *VectorBuilder::getAllTrueMask() {
   return Builder.getAllOnesMask(StaticVectorLength);
 }
 
-Value &VectorBuilder::requestMask() {
-  if (Mask)
+Value &VectorBuilder::requestMask(VectorType *MaskTy) {
+  if (Mask) {
+    assert(MaskTy == Mask->getType() && "Unexpected mask type");
     return *Mask;
-
-  return *getAllTrueMask();
+  }
+  // Return all-true mask for specific type
+  return *Builder.getAllOnesMask(MaskTy->getElementCount());
 }
 
 Value &VectorBuilder::requestEVL() {
@@ -140,13 +142,17 @@ Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
     }
   }
 
-  if (MaskPosOpt)
-    IntrinParams[*MaskPosOpt] = &requestMask();
   if (VLenPosOpt)
     IntrinParams[*VLenPosOpt] = &requestEVL();
 
   auto *VPDecl = VPIntrinsic::getDeclarationForParams(&getModule(), VPID,
                                                       ReturnTy, IntrinParams);
+  if (MaskPosOpt) {
+    auto *MaskTy =
+        cast<VectorType>(VPDecl->getFunctionType()->getParamType(*MaskPosOpt));
+    IntrinParams[*MaskPosOpt] = &requestMask(MaskTy);
+  }
+
   return Builder.CreateCall(VPDecl, IntrinParams, Name);
 }
 
