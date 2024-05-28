@@ -1620,13 +1620,8 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
 
   VectorBuilder VBuilder(Builder);
   VBuilder.setEVL(EVL);
-  Value *Mask;
-  // TODO: move the all-true mask generation into VectorBuilder.
   if (VPValue *CondOp = getCondOp())
-    Mask = State.get(CondOp, 0);
-  else
-    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  VBuilder.setMask(Mask);
+    VBuilder.setMask(State.get(CondOp, 0));
 
   Value *NewRed;
   if (IsOrdered) {
