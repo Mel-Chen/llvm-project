@@ -1443,6 +1443,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   NextEVLIV->insertBefore(CanonicalIVIncrement);
   EVLPhi->addOperand(NextEVLIV);
 
+  using namespace llvm::VPlanPatternMatch;
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       VPRecipeBase *NewRecipe = nullptr;
@@ -1465,6 +1466,12 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
       } else if (auto *RedR = dyn_cast<VPReductionRecipe>(CurRecipe)) {
         NewRecipe = new VPReductionEVLRecipe(RedR, VPEVL,
                                              GetNewMask(RedR->getCondOp()));
+      } else if (auto *VPInst = dyn_cast<VPInstruction>(CurRecipe)) {
+
+        VPValue *LHS, *RHS;
+        if (match(VPInst, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
+                                   m_VPValue(RHS))))
+          dbgs() << "HIT:  " << *VPInst << "\n";
       }
 
       if (NewRecipe) {
