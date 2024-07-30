@@ -43,12 +43,17 @@ Value &VectorBuilder::requestMask() {
 }
 
 Value &VectorBuilder::requestEVL() {
+  assert(!isNonPredicated() && "Unexpected VectorBuilder configure");
   if (ExplicitVectorLength)
     return *ExplicitVectorLength;
 
   assert(!StaticVectorLength.isScalable() && "TODO vscale lowering");
   auto *IntTy = Builder.getInt32Ty();
   return *ConstantInt::get(IntTy, StaticVectorLength.getFixedValue());
+}
+
+bool VectorBuilder::isNonPredicated() {
+  return !ExplicitVectorLength && StaticVectorLength.isZero();
 }
 
 Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
@@ -70,8 +75,11 @@ Value *VectorBuilder::createSimpleTargetReduction(Intrinsic::ID RdxID,
   return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
 }
 
-CallInst *VectorBuilder::createAlignedLoad(Type *Ty, Value *Ptr,
-                                           Align Alignment, const Twine &Name) {
+Instruction *VectorBuilder::createAlignedLoad(Type *Ty, Value *Ptr,
+                                              Align Alignment,
+                                              const Twine &Name) {
+  if (isNonPredicated())
+    return Builder.CreateAlignedLoad(Ty, Ptr, Alignment, Name);
   auto VPLI =
       cast<CallInst>(createVectorInstruction(Instruction::Load, Ty, Ptr, Name));
   VPLI->addParamAttr(

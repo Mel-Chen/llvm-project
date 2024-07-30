@@ -50,6 +50,8 @@ private:
   Value &requestMask();
   Value &requestEVL();
 
+  bool isNonPredicated();
+
   void handleError(const char *ErrorMsg) const;
   template <typename RetType>
   RetType returnWithError(const char *ErrorMsg) const {
@@ -107,12 +109,13 @@ public:
                                      ArrayRef<Value *> VecOpArray,
                                      const Twine &Name = Twine());
 
-  /// Emit a VP load intrinsic call.
+  /// Emit a vector load instruction. Return VP load intrinsic call if EVL is
+  /// set. Otherwise, return LoadInst.
   /// \param Ty         The return type of the load.
   /// \param Ptr        The load address.
   /// \param Alignment  The alignment information of the load.
-  CallInst *createAlignedLoad(Type *Ty, Value *Ptr, Align Alignment,
-                              const Twine &Name = Twine());
+  Instruction *createAlignedLoad(Type *Ty, Value *Ptr, Align Alignment,
+                                 const Twine &Name = Twine());
 };
 
 } // namespace llvm
