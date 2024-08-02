@@ -52,7 +52,7 @@ Value &VectorBuilder::requestEVL() {
   return *ConstantInt::get(IntTy, StaticVectorLength.getFixedValue());
 }
 
-bool VectorBuilder::isNonPredicated() {
+bool VectorBuilder::isNonPredicated() const {
   return !ExplicitVectorLength && StaticVectorLength.isZero();
 }
 

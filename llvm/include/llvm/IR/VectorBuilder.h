@@ -50,7 +50,7 @@ private:
   Value &requestMask();
   Value &requestEVL();
 
-  bool isNonPredicated();
+  bool isNonPredicated() const;
 
   void handleError(const char *ErrorMsg) const;
   template <typename RetType>
