@@ -1357,6 +1357,30 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
+
+  // Adjust reduction phi recipes
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!PhiR || PhiR->isInLoop())
+      continue;
+    VPValue *BackedgeVPV = PhiR->getBackedgeValue();
+    bool IsExiting = any_of(BackedgeVPV->users(), [](VPUser *U) {
+      return isa<VPInstruction>(U) && cast<VPInstruction>(U)->getOpcode() ==
+                                          VPInstruction::ComputeReductionResult;
+    });
+    if (IsExiting)
+      continue;
+
+    auto *FoundRdxSelect = find_if(BackedgeVPV->users(), [](VPUser *U) {
+      return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+    });
+    assert(FoundRdxSelect && "Must have a reduction select when out-loop "
+                             "reduction with tail folding");
+    auto *RdxSelect = cast<VPRecipeBase>(*FoundRdxSelect);
+    PhiR->setOperand(1, RdxSelect->getVPSingleValue());
+  }
+
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
