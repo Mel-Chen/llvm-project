@@ -24,6 +24,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 
+#include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 
 namespace llvm {
