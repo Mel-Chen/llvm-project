@@ -394,6 +394,8 @@ struct VPTransformState {
 
   /// VPlan-based dominator tree.
   VPDominatorTree *VPDT = nullptr;
+
+  VPDominatorTree *getOrCreateVPDT();
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.

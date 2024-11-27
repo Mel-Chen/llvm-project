@@ -225,10 +225,15 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
                                    InnerLoopVectorizer *ILV, VPlan *Plan)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()),
-      VPDT(new VPDominatorTree(*Plan)) {}
+      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()) {}
 
 VPTransformState::~VPTransformState() { delete VPDT; }
+
+VPDominatorTree *VPTransformState::getOrCreateVPDT() {
+  if (!VPDT)
+    VPDT = new VPDominatorTree(*Plan);
+  return VPDT;
+}
 
 Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -273,8 +278,8 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   auto GetBroadcastInstrs = [this, Def](Value *V) {
     bool SafeToHoist =
         !Def->hasDefiningRecipe() ||
-        VPDT->properlyDominates(Def->getDefiningRecipe()->getParent(),
-                                Plan->getVectorPreheader());
+        getOrCreateVPDT()->properlyDominates(
+            Def->getDefiningRecipe()->getParent(), Plan->getVectorPreheader());
 
     if (VF.isScalar())
       return V;
