@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlan.h"
-#include "VPlanCFG.h"
-#include "VPlanDominatorTree.h"
 #include "VPlanAnalysis.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"

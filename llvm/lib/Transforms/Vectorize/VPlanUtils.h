@@ -10,8 +10,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
-#include "VPlanCFG.h"
-#include "VPlanDominatorTree.h"
 
 namespace llvm {
 class ScalarEvolution;

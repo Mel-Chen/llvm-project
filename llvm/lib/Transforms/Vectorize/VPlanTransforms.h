@@ -14,8 +14,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
-#include "VPlanCFG.h"
-#include "VPlanDominatorTree.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace llvm {
