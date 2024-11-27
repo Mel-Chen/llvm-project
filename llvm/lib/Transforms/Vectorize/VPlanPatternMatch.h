@@ -21,6 +21,8 @@
 #define LLVM_TRANSFORM_VECTORIZE_VPLANPATTERNMATCH_H
 
 #include "VPlan.h"
+#include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 
 namespace llvm {
 namespace VPlanPatternMatch {

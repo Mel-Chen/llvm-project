@@ -16,6 +16,8 @@
 
 #include "VPlan.h"
 #include "VPlanValue.h"
+#include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
