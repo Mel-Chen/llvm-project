@@ -295,16 +295,6 @@ void llvm::collectEphemeralRecipesForVPlan(
 template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
     DominatorTreeBase<VPBlockBase, false> &DT);
 
-DomTreeNodeTraits<VPBlockBase>::NodePtr
-DomTreeNodeTraits<VPBlockBase>::getEntryNode(ParentPtr Parent) {
-  return Parent->getEntry();
-}
-
-DomTreeNodeTraits<VPBlockBase>::ParentPtr
-DomTreeNodeTraits<VPBlockBase>::getParent(NodePtr B) {
-  return B->getPlan();
-}
-
 bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
                                         const VPRecipeBase *B) {
   if (A == B)
