@@ -415,11 +415,13 @@ bool RecurrenceDescriptor::AddReductionVar(
     if (IsAPhi && Cur != Phi && !areAllUsesIn(Cur, VisitedInsts))
       return false;
 
-    if ((isIntMinMaxRecurrenceKind(Kind) || Kind == RecurKind::IAnyOf) &&
+    if (isIntMinMaxRecurrenceKind(Kind) &&
         (isa<ICmpInst>(Cur) || isa<SelectInst>(Cur)))
       ++NumCmpSelectPatternInst;
-    if ((isFPMinMaxRecurrenceKind(Kind) || Kind == RecurKind::FAnyOf) &&
+    if (isFPMinMaxRecurrenceKind(Kind) &&
         (isa<FCmpInst>(Cur) || isa<SelectInst>(Cur)))
+      ++NumCmpSelectPatternInst;
+    if (isAnyOfRecurrenceKind(Kind) && IsASelect)
       ++NumCmpSelectPatternInst;
 
     // Check  whether we found a reduction operator.
@@ -911,12 +913,6 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   if (AddReductionVar(Phi, RecurKind::FMin, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found a float MIN reduction PHI." << *Phi << "\n");
-    return true;
-  }
-  if (AddReductionVar(Phi, RecurKind::FAnyOf, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float conditional select reduction PHI."
-                      << " PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, FMF, RedDes, DB, AC, DT,
