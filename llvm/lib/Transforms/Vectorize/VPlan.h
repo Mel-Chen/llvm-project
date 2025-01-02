@@ -2594,6 +2594,13 @@ protected:
                     VPValue *CondOp, bool IsOrdered, DebugLoc DL)
       : VPSingleDefRecipe(SC, Operands, I, DL), RdxDesc(R),
         IsOrdered(IsOrdered) {
+    [[maybe_unused]] RecurKind Kind = R.getRecurrenceKind();
+    assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+           !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+           "Unexpected recurrence kind");
+    assert(
+        (!IsOrdered || Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
+        "Unexpected ordered recurrence kind");
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
