@@ -2205,7 +2205,6 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   Type *ElementTy = Ctx.Types.inferScalarType(this);
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  unsigned Opcode = RdxDesc.getOpcode();
 
   // TODO: Support any-of and in-loop reductions.
   assert(
@@ -2221,14 +2220,21 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
          "Inferred type and recurrence type mismatch.");
 
   // Cost = Reduction cost + BinOp cost
-  InstructionCost Cost =
-      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, CostKind);
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
+    // FIXME: FCmp and ICmp are not arithmetic operations.
+    InstructionCost Cost = Ctx.TTI.getArithmeticInstrCost(
+        RecurrenceDescriptor::isFPMinMaxRecurrenceKind(RdxKind)
+            ? Instruction::FCmp
+            : Instruction::ICmp,
+        ElementTy, CostKind);
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
     return Cost + Ctx.TTI.getMinMaxReductionCost(
                       Id, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
   }
 
+  unsigned Opcode = RdxDesc.getOpcode();
+  InstructionCost Cost =
+      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, CostKind);
   return Cost + Ctx.TTI.getArithmeticReductionCost(
                     Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
 }
