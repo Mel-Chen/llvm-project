@@ -2249,7 +2249,12 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
+  RecurKind RdxKind = RdxDesc.getRecurrenceKind();
+  StringRef RdxOperation =
+      RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)
+          ? Intrinsic::getBaseName(getMinMaxReductionIntrinsicOp(RdxKind))
+          : Instruction::getOpcodeName(RdxDesc.getOpcode());
+  O << " reduce." << RdxOperation << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
     O << ", ";
@@ -2271,7 +2276,12 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " vp.reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
+  RecurKind RdxKind = RdxDesc.getRecurrenceKind();
+  StringRef RdxOperation =
+      RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)
+          ? Intrinsic::getBaseName(getMinMaxReductionIntrinsicOp(RdxKind))
+          : Instruction::getOpcodeName(RdxDesc.getOpcode());
+  O << " vp.reduce." << RdxOperation << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
   getEVL()->printAsOperand(O, SlotTracker);
