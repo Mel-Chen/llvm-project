@@ -6106,6 +6106,23 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
                "Expected consecutive stride.");
         InstWidening Decision =
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
+        // Attempt Gather/Scatter when handling consecutive accesses with a
+        // stride of -1. This may allow conversion into more efficient strided
+        // memory accesses with a stride of -1.
+        if (ConsecutiveStride == -1) {
+          // TODO: Add CM_Strided and use getStridedMemoryOpCost to obtain the
+          // cost.
+          const InstructionCost GatherScatterCost =
+              isLegalGatherOrScatter(&I, VF) ? getGatherScatterCost(&I, VF)
+                                             : InstructionCost::getInvalid();
+          if (GatherScatterCost < Cost) {
+	    dbgs() << "VF:" << VF << "\n";
+	    dbgs() << "Gather:" << GatherScatterCost << "\n";
+	    dbgs() << "Cost:" << Cost << "\n";
+            Decision = CM_GatherScatter;
+            Cost = GatherScatterCost;
+          }
+        }
         setWideningDecision(&I, VF, Decision, Cost);
         continue;
       }
@@ -7177,6 +7194,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   CM.collectInLoopReductions();
   for (const auto &VF : VFCandidates) {
+    dbgs() <<"HERE?" << "\n";
     // Collect Uniform and Scalar instructions after vectorization with VF.
     CM.collectUniformsAndScalars(VF);
 
@@ -7186,6 +7204,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.collectInstsToScalarize(VF);
   }
 
+  dbgs() << MaxFactors.FixedVF << " : " << MaxFactors.ScalableVF << "\n";
   buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxFactors.FixedVF);
   buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
@@ -8933,10 +8952,12 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                                                         ElementCount MaxVF) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
 
+  dbgs() <<"Start VF:" << MinVF << "->" << MaxVF << "\n";
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange)) {
+      dbgs() << "GET PLAN!!\n";
       bool HasScalarVF = Plan->hasVF(ElementCount::getFixed(1));
       // Now optimize the initial VPlan.
       if (!HasScalarVF)
@@ -8947,13 +8968,16 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       // Discard the plan if it is not EVL-compatible
       if (CM.foldTailWithEVL() && !HasScalarVF &&
           !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
-                                    *Plan, CM.getMaxSafeElements()))
+                                    *Plan, CM.getMaxSafeElements())) {
+	dbgs() << "Bail OUT?\n";
         break;
+      }
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
     VF = SubRange.End;
   }
+  dbgs() <<"End VF:" << MinVF << "->" << MaxVF << "\n";
 }
 
 // Add the necessary canonical IV and branch recipes required to control the
