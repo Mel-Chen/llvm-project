@@ -78,6 +78,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:
     return SetResultTyFromOp();
+  case Instruction::ExtractElement:
   case VPInstruction::ExtractFirstActive:
   case VPInstruction::ExtractFromEnd: {
     Type *BaseTy = inferScalarType(R->getOperand(0));

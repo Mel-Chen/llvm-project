@@ -1635,6 +1635,48 @@ void VPlanTransforms::addActiveLaneMask(
     HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
+/// Adjust the way the resume value is obtained when using tail folding by EVL.
+/// Expanding ExtractFromEnd since the penultimate EVL could not equals to
+/// VFxUF. Expand
+///   %resume = ExtractFromEnd %vec, 1
+/// to
+///   %last.active.idx = sub %EVL, 1
+///   %resume = extractelement %vec, %last.active.idx
+static void adjustResumePhisForEVL(VPlan &Plan, VPValue &EVL) {
+  LLVMContext &Ctx = Plan.getCanonicalIV()->getScalarType()->getContext();
+  using namespace VPlanPatternMatch;
+  for (VPRecipeBase &R : *cast<VPBasicBlock>(Plan.getScalarPreheader())) {
+    VPValue *FromMiddleBlock;
+    if (!match(&R, m_VPInstruction<VPInstruction::ResumePhi>(
+                       m_VPValue(FromMiddleBlock), m_VPValue())))
+      continue;
+
+    VPValue *ExtractFrom;
+    if (match(FromMiddleBlock, m_VPInstruction<VPInstruction::ExtractFromEnd>(
+                                   m_VPValue(ExtractFrom), m_SpecificInt(1)))) {
+      // Skip if all elements are uniform.
+      if (vputils::isUniformAfterVectorization(ExtractFrom))
+        continue;
+      auto *ExtractR = cast<VPInstruction>(FromMiddleBlock);
+      VPBuilder Builder(ExtractR);
+      VPValue *OneVPV =
+          Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(Ctx), 1));
+      VPValue *LastActiveIdx =
+          Builder.createNaryOp(Instruction::Sub, {&EVL, OneVPV},
+                               ExtractR->getDebugLoc(), "last.active.idx");
+      VPValue *NewExtract = Builder.createNaryOp(
+          Instruction::ExtractElement, {ExtractFrom, LastActiveIdx},
+          ExtractR->getDebugLoc(), ExtractR->getName());
+      ExtractR->replaceAllUsesWith(NewExtract);
+      ExtractR->eraseFromParent();
+    }
+    assert((!dyn_cast<VPInstruction>(FromMiddleBlock) ||
+            cast<VPInstruction>(FromMiddleBlock)->getOpcode() !=
+                VPInstruction::ExtractFromEnd) &&
+           "Only extract the last lane for resumed values");
+  }
+}
+
 /// Try to convert \p CurRecipe to a corresponding EVL-based recipe. Returns
 /// nullptr if no EVL-based recipe could be created.
 /// \p HeaderMask  Header Mask.
@@ -1799,6 +1841,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       ToErase.push_back(CurRecipe);
     }
   }
+
+  adjustResumePhisForEVL(Plan, EVL);
 
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
