@@ -153,6 +153,9 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPScalarCastRecipe>(
             [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
+          // Used by extracting the element at last active lane.
+          if (I->getOpcode() == Instruction::Sub)
+            return VerifyEVLUse(*I, 0);
           if (I->getOpcode() != Instruction::Add) {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
             return false;

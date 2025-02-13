@@ -478,6 +478,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
   }
+  case Instruction::ExtractElement: {
+    assert(State.VF.isVector() && "Only extract elements from vectors");
+    Value *Vec = State.get(getOperand(0));
+    Value *Idx = State.get(getOperand(1), /*IsScalar*/ true);
+    return Builder.CreateExtractElement(Vec, Idx, Name);
+  }
   case VPInstruction::ActiveLaneMask: {
     // Get first lane of vector induction variable.
     Value *VIVElem0 = State.get(getOperand(0), VPLane(0));
@@ -752,7 +758,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 }
 
 bool VPInstruction::isVectorToScalar() const {
-  return getOpcode() == VPInstruction::ExtractFromEnd ||
+  return getOpcode() == Instruction::ExtractElement ||
+         getOpcode() == VPInstruction::ExtractFromEnd ||
          getOpcode() == VPInstruction::ExtractFirstActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
@@ -814,6 +821,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   switch (getOpcode()) {
   case Instruction::ICmp:
   case Instruction::Select:
+  case Instruction::ExtractElement:
   case VPInstruction::AnyOf:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -851,6 +859,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::BranchOnCond:
   case VPInstruction::ResumePhi:
     return true;
+  case Instruction::ExtractElement:
+    return Op == getOperand(1);
   };
   llvm_unreachable("switch should return");
 }
