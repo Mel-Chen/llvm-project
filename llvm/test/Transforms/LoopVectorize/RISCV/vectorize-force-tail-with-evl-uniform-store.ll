@@ -35,18 +35,13 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[TMP0]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[SPEC_SELECT]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[IV:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP23:%.*]] = sub nuw nsw i64 1, [[IV]]
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP23]]
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 0, [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 1, [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[TMP18]], i64 [[TMP17]]
-; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_REVERSE]], ptr align 8 [[TMP19]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
-; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = sub nuw nsw i64 1, [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[TMP14]], i32 0
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i64(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[TMP15]], i64 -8, <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
