@@ -334,6 +334,7 @@ public:
     VPReplicateSC,
     VPScalarCastSC,
     VPScalarIVStepsSC,
+    VPStridedLoadSC,
     VPVectorPointerSC,
     VPVectorEndPointerSC,
     VPWidenCallSC,

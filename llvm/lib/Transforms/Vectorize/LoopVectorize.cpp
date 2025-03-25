@@ -3476,6 +3476,10 @@ bool LoopVectorizationCostModel::stridedAccessCanBeWidened(
   if (!VF.isVector())
     return false;
 
+  // FIXME: Remove this check for StoreInst after strided store is supported.
+  if (isa<StoreInst>(I))
+    return false;
+
   [[maybe_unused]] auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
   // TODO: Support non-unit-reverse strided accesses. Add stride analysis here
@@ -4395,7 +4399,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
                 [](const auto *R) { return Instruction::Select; })
             .Case<VPWidenStoreRecipe>(
                 [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe>(
+            .Case<VPWidenLoadRecipe, VPStridedLoadRecipe>(
                 [](const auto *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
@@ -4494,6 +4498,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenPointerInductionSC:
       case VPDef::VPReductionPHISC:
       case VPDef::VPInterleaveSC:
+      case VPDef::VPStridedLoadSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
       case VPDef::VPWidenStoreEVLSC:
@@ -8395,13 +8400,22 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
-  if (LoadInst *Load = dyn_cast<LoadInst>(I))
+  if (LoadInst *Load = dyn_cast<LoadInst>(I)) {
+    if (Strided) {
+      const DataLayout &DL = Load->getDataLayout();
+      auto *StrideTy = DL.getIndexType(Load->getPointerOperand()->getType());
+      VPValue *Stride = Plan.getOrAddLiveIn(ConstantInt::get(
+          StrideTy, -1 * DL.getTypeAllocSize(getLoadStoreType(Load))));
+      return new VPStridedLoadRecipe(*Load, Ptr, Stride, &Plan.getVF(), Mask,
+                                     I->getDebugLoc());
+    }
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 Strided, I->getDebugLoc());
+                                 I->getDebugLoc());
+  }
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, Strided, I->getDebugLoc());
+                                Reverse, I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also

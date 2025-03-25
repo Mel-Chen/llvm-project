@@ -73,13 +73,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, false /*Strided*/,
+              false /*Consecutive*/, false /*Reverse*/,
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              false /*Strided*/, Ingredient.getDebugLoc());
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -1771,9 +1771,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
   }
 
+  // TODO: use Plan.getVF().replaceAllUsesWith(&EVL)
   for (VPUser *U : to_vector(Plan.getVF().users())) {
     if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
       R->setOperand(1, &EVL);
+    if (auto *R = dyn_cast<VPStridedLoadRecipe>(U))
+      R->setOperand(2, &EVL);
   }
 
   SmallVector<VPRecipeBase *> ToErase;
@@ -2338,7 +2341,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     auto *L = new VPWidenLoadRecipe(
         *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
         LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-        /*Reverse=*/false, /*Strided=*/false, LoadGroup->getDebugLoc());
+        /*Reverse=*/false, LoadGroup->getDebugLoc());
     L->insertBefore(LoadGroup);
     return L;
   };
@@ -2351,7 +2354,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
         StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, /*Strided=*/false, StoreGroup->getDebugLoc());
+        /*Reverse=*/false, StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }
