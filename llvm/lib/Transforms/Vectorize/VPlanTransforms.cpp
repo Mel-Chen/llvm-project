@@ -1695,6 +1695,12 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(L->getMask());
         return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
       })
+      .Case<VPStridedLoadRecipe>([&](VPStridedLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPStridedLoadRecipe(*cast<LoadInst>(&L->getIngredient()),
+                                       L->getAddr(), L->getStride(), &EVL,
+                                       NewMask, L->getDebugLoc());
+      })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
@@ -1771,12 +1777,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
   }
 
-  // TODO: use Plan.getVF().replaceAllUsesWith(&EVL)
   for (VPUser *U : to_vector(Plan.getVF().users())) {
     if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
       R->setOperand(1, &EVL);
-    if (auto *R = dyn_cast<VPStridedLoadRecipe>(U))
-      R->setOperand(2, &EVL);
   }
 
   SmallVector<VPRecipeBase *> ToErase;
@@ -1797,7 +1800,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           NumDefVal <= 1 &&
           "Only supports recipes with a single definition or without users.");
       EVLRecipe->insertBefore(CurRecipe);
-      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
+      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPStridedLoadRecipe>(
+              EVLRecipe)) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
