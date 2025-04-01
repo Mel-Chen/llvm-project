@@ -1685,4 +1685,24 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
                  [](std::pair<int, Instruction *> p) { return p.second; });
   propagateMetadata(NewInst, VL);
 }
+
+void AccessStrideInfo::collectConstStrideAccesses() {
+  const auto &Strides =
+      LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
+
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    for (auto &I : *BB) {
+      Value *Ptr = getLoadStorePointerOperand(&I);
+      if (!Ptr)
+        continue;
+      Type *AccessTy = getLoadStoreType(&I);
+
+      std::optional<int64_t> Stride =
+          getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides,
+                       /*Assume=*/!OptForSize, /*ShouldCheckWrap=*/false);
+      if (Stride)
+        StrideInfo[&I] = *Stride;
+    }
+  }
+}
 } // namespace llvm

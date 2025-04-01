@@ -955,11 +955,11 @@ public:
                              AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE, const Function *F,
                              const LoopVectorizeHints *Hints,
-                             InterleavedAccessInfo &IAI,
+                             AccessStrideInfo &ASI, InterleavedAccessInfo &IAI,
                              ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
-        Hints(Hints), InterleaveInfo(IAI) {
+        Hints(Hints), StrideInfo(ASI), InterleaveInfo(IAI) {
     if (TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors)
       initializeVScaleForTuning();
     CostKind = F->hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
@@ -1351,6 +1351,17 @@ public:
   /// Returns true if \p I is a memory instruction with strided memory access
   /// that can be vectorized.
   bool stridedAccessCanBeWidened(Instruction *I, ElementCount VF) const;
+
+  /// Check if \p Instr is a strided memory access.
+  bool isAccessStrided(Instruction *Instr) const {
+    return StrideInfo.isConstStride(Instr);
+  }
+
+  /// Get the stride of the strided memory access \p Instr.
+  int64_t getStride(Instruction *Instr) const {
+    assert(isAccessStrided(Instr) && "Instr must be a strided access");
+    return StrideInfo.getStrideInfo().find(Instr)->second;
+  }
 
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
@@ -1796,6 +1807,10 @@ public:
 
   /// Loop Vectorize Hint.
   const LoopVectorizeHints *Hints;
+
+  /// The stride information contains the mapping between memory access and
+  /// corresponding stride values.
+  AccessStrideInfo &StrideInfo;
 
   /// The interleave access information contains groups of interleaved accesses
   /// with the same stride and close to each other.
@@ -8404,9 +8419,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     if (Strided) {
       const DataLayout &DL = Load->getDataLayout();
       auto *StrideTy = DL.getIndexType(Load->getPointerOperand()->getType());
-      VPValue *Stride = Plan.getOrAddLiveIn(ConstantInt::get(
-          StrideTy, -1 * DL.getTypeAllocSize(getLoadStoreType(Load))));
-      return new VPStridedLoadRecipe(*Load, Ptr, Stride, &Plan.getVF(), Mask,
+      int64_t Stride = CM.getStride(Load);
+      assert(Stride == -1 &&
+             "Only stride memory access with a stride of -1 is supported.");
+      VPValue *StrideVPV = Plan.getOrAddLiveIn(ConstantInt::get(
+          StrideTy, Stride * DL.getTypeAllocSize(getLoadStoreType(Load))));
+      return new VPStridedLoadRecipe(*Load, Ptr, StrideVPV, &Plan.getVF(), Mask,
                                      I->getDebugLoc());
     }
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
@@ -10141,13 +10159,17 @@ static bool processLoopInVPlanNativePath(
   }
   assert(EnableVPlanNativePath && "VPlan-native path is disabled.");
   Function *F = L->getHeader()->getParent();
+  bool OptForSize = !llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
+                                                 PGSOQueryType::IRPass);
+  AccessStrideInfo ASI(PSE, L, LVL->getLAI(), OptForSize);
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
 
   ScalarEpilogueLowering SEL =
       getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, *LVL, &IAI);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
-                                &Hints, IAI, PSI, BFI);
+                                &Hints, ASI, IAI, PSI, BFI);
+
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
@@ -10641,6 +10663,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   assert(L->isInnermost() && "Inner loop expected.");
 
+  bool OptForSize = !llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
+                                                 PGSOQueryType::IRPass);
+  // Collect strided memory accesses infomation.
+  AccessStrideInfo ASI(PSE, L, LVL.getLAI(), OptForSize);
+
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
   bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
 
@@ -10750,7 +10777,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Use the cost model.
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
-                                F, &Hints, IAI, PSI, BFI);
+                                F, &Hints, ASI, IAI, PSI, BFI);
+
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, IAI, PSE, Hints,
                                ORE);

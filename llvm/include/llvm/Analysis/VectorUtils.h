@@ -861,6 +861,34 @@ private:
   }
 };
 
+class AccessStrideInfo {
+public:
+  AccessStrideInfo(PredicatedScalarEvolution &PSE, Loop *L,
+                   const LoopAccessInfo *LAI, bool OptForSize)
+      : PSE(PSE), TheLoop(L), LAI(LAI), OptForSize(OptForSize) {
+    collectConstStrideAccesses();
+  }
+
+  using StrideList = DenseMap<Instruction *, int64_t>;
+
+  bool isConstStride(Instruction *I) const { return StrideInfo.count(I); }
+
+  const StrideList getStrideInfo() const { return StrideInfo; }
+
+private:
+  void collectConstStrideAccesses();
+
+  PredicatedScalarEvolution &PSE;
+
+  Loop *TheLoop;
+
+  const LoopAccessInfo *LAI = nullptr;
+
+  bool OptForSize;
+
+  StrideList StrideInfo;
+};
+
 } // llvm namespace
 
 #endif
