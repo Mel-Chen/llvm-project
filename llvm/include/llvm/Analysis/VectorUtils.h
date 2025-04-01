@@ -861,6 +861,51 @@ private:
   }
 };
 
+/// This class analyzes memory accesses in a loop to determine their stride
+/// values.
+/// TODO: Support non-constant stride
+class AccessStrideInfo {
+public:
+  AccessStrideInfo(PredicatedScalarEvolution &PSE, Loop *L,
+                   const LoopAccessInfo *LAI, bool OptForSize)
+      : PSE(PSE), TheLoop(L), LAI(LAI), OptForSize(OptForSize) {
+    collectConstStrideAccesses();
+  }
+
+  /// Defines a mapping from instructions to their corresponding constant stride
+  /// values.
+  using StrideList = DenseMap<Instruction *, int64_t>;
+
+  /// Checks if a given instruction \p Instr has a known constant stride.
+  bool isConstStride(Instruction *Instr) const {
+    return StrideInfo.count(Instr);
+  }
+
+  /// Returns the mapping of instructions to their corresponding constant
+  /// strides.
+  const StrideList getStrideInfo() const { return StrideInfo; }
+
+private:
+  /// Collects memory accesses in the loop that have constant strides
+  /// and stores them in StrideInfo.
+  void collectConstStrideAccesses();
+
+  /// Predicated scalar evolution analysis.
+  PredicatedScalarEvolution &PSE;
+
+  /// The loop that we analyze.
+  Loop *TheLoop;
+
+  /// Loop access information.
+  const LoopAccessInfo *LAI = nullptr;
+
+  /// Flag indicating whether the analysis should optimize for size.
+  bool OptForSize;
+
+  /// The mapping of memory access instructions to their stride values.
+  StrideList StrideInfo;
+};
+
 } // llvm namespace
 
 #endif

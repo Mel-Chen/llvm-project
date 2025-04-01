@@ -1685,4 +1685,30 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
                  [](std::pair<int, Instruction *> p) { return p.second; });
   propagateMetadata(NewInst, VL);
 }
+
+void AccessStrideInfo::collectConstStrideAccesses() {
+  auto &DL = TheLoop->getHeader()->getDataLayout();
+  const auto &Strides =
+      LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
+
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    for (auto &I : *BB) {
+      Value *Ptr = getLoadStorePointerOperand(&I);
+      if (!Ptr)
+        continue;
+      Type *AccessTy = getLoadStoreType(&I);
+
+      // Currently, codegen doesn't support cases where the type size doesn't
+      // match the alloc size. Skip them for now.
+      if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+        continue;
+
+      std::optional<int64_t> Stride =
+          getPtrStride(PSE, AccessTy, Ptr, TheLoop, /*PtrToStride=*/Strides,
+                       /*Assume=*/!OptForSize, /*ShouldCheckWrap=*/false);
+      if (Stride)
+        StrideInfo[&I] = *Stride;
+    }
+  }
+}
 } // namespace llvm
