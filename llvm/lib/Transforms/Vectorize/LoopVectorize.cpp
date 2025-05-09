@@ -9883,6 +9883,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    RecurKind Kind = RdxDesc.getRecurrenceKind();
     // If tail is folded by masking, introduce selects between the phi
     // and the users outside the vector region of each reduction, at the
     // beginning of the dedicated latch block.
@@ -9918,8 +9919,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // entire expression in the smaller type.
     Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
     if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType() &&
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+        !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
       assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
       auto *Trunc =
@@ -9952,8 +9952,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind)) {
       VPValue *Start = PhiR->getStartValue();
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
@@ -9973,8 +9972,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // with a boolean reduction phi node to check if the condition is true in
     // any iteration. The final value is selected by the final
     // ComputeReductionResult.
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
       auto *Select = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
         return isa<VPWidenSelectRecipe>(U) ||
                (isa<VPReplicateRecipe>(U) &&
@@ -10003,8 +10001,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
     }
 
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind)) {
       // Adjust the start value for FindLastIV recurrences to use the sentinel
       // value after generating the ResumePhi recipe, which uses the original
       // start value.
