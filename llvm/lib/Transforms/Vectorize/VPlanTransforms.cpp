@@ -625,13 +625,14 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
-  VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
-    if (!PhiR)
-      continue;
+  SmallVector<VPWidenInductionRecipe *, 4> InductionPhis;
+  for (VPRecipeBase &R : HeaderVPBB->phis())
+    if (auto *IV = dyn_cast<VPWidenInductionRecipe>(&R))
+      InductionPhis.push_back(IV);
 
+  bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
+  VPBuilder Builder;
+  for (VPWidenInductionRecipe *PhiR : reverse(InductionPhis)) {
     // Try to narrow wide and replicating recipes to uniform recipes, based on
     // VPlan analysis.
     // TODO: Apply to all recipes in the future, to replace legacy uniformity
@@ -657,9 +658,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       Def->replaceAllUsesWith(Clone);
     }
 
+    Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
-    if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
+    if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(PhiR)) {
       if (!PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
         continue;
 
@@ -680,7 +682,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
     // Replace widened induction with scalar steps for users that only use
     // scalars.
-    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(PhiR);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
         }))
