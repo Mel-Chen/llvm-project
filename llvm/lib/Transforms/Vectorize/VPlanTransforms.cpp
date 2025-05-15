@@ -656,6 +656,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                                           Def->operands(), /*IsUniform*/ true);
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
+      Def->eraseFromParent();
     }
 
     Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
