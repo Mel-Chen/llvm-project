@@ -5965,7 +5965,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
   VectorTy = VectorType::get(I->getOperand(0)->getType(), VectorTy);
 
   Instruction *Op0, *Op1;
-  if (RedOp && RdxDesc.getOpcode() == Instruction::Add &&
+  if (RedOp && RK == RecurKind::Add &&
       match(RedOp,
             m_ZExtOrSExt(m_Mul(m_Instruction(Op0), m_Instruction(Op1)))) &&
       match(Op0, m_ZExtOrSExt(m_Value())) &&
@@ -6011,7 +6011,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
                              TTI::CastContextHint::None, CostKind, RedOp);
     if (RedCost.isValid() && RedCost < BaseCost + ExtCost)
       return I == RetI ? RedCost : 0;
-  } else if (RedOp && RdxDesc.getOpcode() == Instruction::Add &&
+  } else if (RedOp && RK == RecurKind::Add &&
              match(RedOp, m_Mul(m_Instruction(Op0), m_Instruction(Op1)))) {
     if (match(Op0, m_ZExtOrSExt(m_Value())) &&
         Op0->getOpcode() == Op1->getOpcode() &&
