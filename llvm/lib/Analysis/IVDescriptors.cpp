@@ -1165,22 +1165,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
     return Instruction::FAdd;
-  case RecurKind::SMax:
-  case RecurKind::SMin:
-  case RecurKind::UMax:
-  case RecurKind::UMin:
-  case RecurKind::IAnyOf:
-  case RecurKind::IFindLastIV:
-    return Instruction::ICmp;
-  case RecurKind::FMax:
-  case RecurKind::FMin:
-  case RecurKind::FMaximum:
-  case RecurKind::FMinimum:
-  case RecurKind::FMaximumNum:
-  case RecurKind::FMinimumNum:
-  case RecurKind::FAnyOf:
-  case RecurKind::FFindLastIV:
-    return Instruction::FCmp;
   default:
     llvm_unreachable("Unknown recurrence operation");
   }
