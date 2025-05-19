@@ -76,7 +76,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
           [&](const auto *R) {
             return all_of(R->getDefiningRecipe()->operands(), isSingleScalar);
           })
-      .Case<VPWidenRecipe>([&](const auto *WidenR) {
+      .Case<VPWidenRecipe, VPWidenCastRecipe>([&](const auto *WidenR) {
         return PreservesUniformity(WidenR->getOpcode()) &&
                all_of(WidenR->operands(), isSingleScalar);
       })
