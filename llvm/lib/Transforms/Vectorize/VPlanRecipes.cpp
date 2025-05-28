@@ -628,6 +628,30 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return createFindLastIVReduction(Builder, ReducedPartRdx,
                                      State.get(getOperand(1), true), RdxDesc);
   }
+  case VPInstruction::ComputeMinMaxIdxResult: {
+    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
+    // and will be removed by breaking up the recipe further.
+    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
+    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    [[maybe_unused]] RecurKind RK = RdxDesc.getRecurrenceKind();
+    assert(RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(RK) &&
+           "Unexpected reduction kind");
+    assert(!PhiR->isInLoop() &&
+           "In-loop MinMaxIdx reduction is not supported yet");
+
+    RecurKind OpKind =
+        RK == RecurKind::MinMaxFirstIdx ? RecurKind::SMin : RecurKind::SMax;
+    // The recipe's operands are the reduction phi, followed by one operand for
+    // each part of the reduction.
+    unsigned UF = getNumOperands() - 2;
+    Value *ReducedPartRdx = State.get(getOperand(2));
+    for (unsigned Part = 1; Part < UF; ++Part)
+      ReducedPartRdx = createMinMaxOp(Builder, OpKind, ReducedPartRdx,
+                                      State.get(getOperand(2 + Part)));
+
+    return createMinMaxIdxReduction(Builder, ReducedPartRdx,
+                                    State.get(getOperand(1), true), RdxDesc);
+  }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -639,6 +663,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     RecurKind RK = RdxDesc.getRecurrenceKind();
     assert(!RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
            "should be handled by ComputeFindLastIVResult");
+    assert(!RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(RK) &&
+           "should be handled by ComputeMinMaxIdxResult");
 
     Type *PhiTy = OrigPhi->getType();
     // The recipe's operands are the reduction phi, followed by one operand for
@@ -836,6 +862,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeFindLastIVResult ||
+         getOpcode() == VPInstruction::ComputeMinMaxIdxResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
@@ -933,6 +960,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ComputeFindLastIVResult:
+  case VPInstruction::ComputeMinMaxIdxResult:
     return Op == getOperand(1);
   };
   llvm_unreachable("switch should return");
@@ -1017,6 +1045,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeFindLastIVResult:
     O << "compute-find-last-iv-result";
+    break;
+  case VPInstruction::ComputeMinMaxIdxResult:
+    O << "compute-min-max-idx-iv-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
@@ -3847,7 +3878,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       Builder.SetInsertPoint(VectorPH->getTerminator());
       StartV = Iden = State.get(StartVPV);
     }
-  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) ||
+             RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(RK)) {
     // [I|F]FindLastIV will use a sentinel value to initialize the reduction
     // phi or the resume value from the main vector loop when vectorizing the
     // epilogue loop. In the exit block, ComputeReductionResult will generate
