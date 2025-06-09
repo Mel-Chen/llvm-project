@@ -149,8 +149,7 @@ public:
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
 
   static VPLane getLaneFromEnd(const ElementCount &VF, unsigned Offset) {
-    assert(Offset > 0 && Offset <= VF.getKnownMinValue() &&
-           "trying to extract with invalid offset");
+    assert(Offset > 0 && "trying to extract with invalid offset");
     unsigned LaneOffset = VF.getKnownMinValue() - Offset;
     Kind LaneKind;
     if (VF.isScalable())

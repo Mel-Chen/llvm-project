@@ -8566,8 +8566,13 @@ static void addExitUsersForFirstOrderRecurrences(
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
-  auto IsScalableOne = [](ElementCount VF) -> bool {
-    return VF.isScalable() && VF.getKnownMinValue() == 1;
+  auto MayOneElement = [&Plan](ElementCount VF) -> bool {
+    if (!VF.isScalable() || VF.getKnownMinValue() != 1)
+      return false;
+
+    const Function *Fn = Plan.getScalarHeader()->getIRBasicBlock()->getParent();
+    const auto &Attr = Fn->getFnAttribute(Attribute::VScaleRange);
+    return !Attr.isValid() || Attr.getVScaleRangeMin() == 1;
   };
 
   for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
@@ -8654,8 +8659,8 @@ static void addExitUsersForFirstOrderRecurrences(
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead, we can extract the last
       // element directly from VPInstruction::FirstOrderRecurrenceSplice.
-      // TODO: Consider vscale_range info and UF.
-      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
+      // TODO: Consider UF > 1.
+      if (LoopVectorizationPlanner::getDecisionAndClampRange(MayOneElement,
                                                              Range))
         return;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(

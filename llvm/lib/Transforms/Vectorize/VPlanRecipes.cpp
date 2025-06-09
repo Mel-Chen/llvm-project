@@ -715,8 +715,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     unsigned Offset = getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
     Value *Res;
     if (State.VF.isVector()) {
-      assert(Offset <= State.VF.getKnownMinValue() &&
-             "invalid offset to extract from");
       // Extract lane VF - Offset from the operand.
       Res = State.get(getOperand(0), VPLane::getLaneFromEnd(State.VF, Offset));
     } else {
