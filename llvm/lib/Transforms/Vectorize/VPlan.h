@@ -557,6 +557,7 @@ public:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
+    case VPRecipeBase::VPDeinterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
@@ -2398,6 +2399,47 @@ public:
   }
 
   Instruction *getInsertPos() const { return IG->getInsertPos(); }
+};
+
+class VPDeinterleaveRecipe : public VPRecipeBase {
+  const InterleaveGroup<Instruction> *IG;
+
+public:
+  VPDeinterleaveRecipe(const InterleaveGroup<Instruction> *IG,
+                       VPValue *WidenValue, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPDeinterleaveSC, {WidenValue}, DL), IG(IG) {
+    assert(!IG->isReverse() && "Unsupported reverse group");
+    for (unsigned i = 0; i < IG->getFactor(); ++i)
+      if (Instruction *I = IG->getMember(i))
+        new VPValue(I, this);
+  }
+
+  ~VPDeinterleaveRecipe() override = default;
+
+  VPDeinterleaveRecipe *clone() override {
+    return new VPDeinterleaveRecipe(IG, getWidenValue(), getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPDeinterleaveSC)
+
+  VPValue *getWidenValue() const { return getOperand(0); }
+
+  unsigned getFactor() const { return IG->getFactor(); }
+
+  /// Generate the deinterleave or shuffles.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPDeinterleaveRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on

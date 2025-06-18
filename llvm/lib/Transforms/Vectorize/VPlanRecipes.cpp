@@ -56,6 +56,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return true;
+  case VPDeinterleaveSC:
   case VPReplicateSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayWriteToMemory();
@@ -147,6 +148,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
 
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
+  case VPDeinterleaveSC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
@@ -3480,6 +3482,91 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
                                            VectorTy, std::nullopt, Ctx.CostKind,
                                            0);
+}
+
+void VPDeinterleaveRecipe::execute(VPTransformState &State) {
+  const InterleaveGroup<Instruction> *Group = IG;
+  unsigned Factor = getFactor();
+  Value *WidenValue = State.get(getWidenValue());
+  auto *WidenValueTy = cast<VectorType>(WidenValue->getType());
+  Type *ScalarTy = WidenValueTy->getElementType();
+
+  ArrayRef<VPValue *> VPDefs = definedValues();
+  const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
+  if (WidenValueTy->isScalableTy()) {
+    // Scalable vectors cannot use arbitrary shufflevectors (only splats),
+    // so must use intrinsics to deinterleave.
+    assert(Factor <= 8 &&
+           "Unsupported deinterleave factor for scalable vectors");
+    Value *Deinterleave = State.Builder.CreateIntrinsic(
+        getDeinterleaveIntrinsicID(Factor), WidenValueTy, WidenValue,
+        /*FMFSource=*/nullptr, "strided.vec");
+
+    for (unsigned I = 0, J = 0; I < Factor; ++I) {
+      Instruction *Member = Group->getMember(I);
+      // Skip the gaps in the group.
+      if (!Member)
+        continue;
+
+      Value *StridedVec = State.Builder.CreateExtractValue(Deinterleave, I);
+      // If this member has different type, cast the result type.
+      if (Member->getType() != ScalarTy) {
+        VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+        StridedVec =
+            createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+      }
+
+      State.set(VPDefs[J], StridedVec);
+      ++J;
+    }
+
+    return;
+  }
+  assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+
+  // For each member in the group, shuffle out the appropriate data from the
+  // wide loads.
+  for (unsigned I = 0, J = 0; I < Factor; ++I) {
+    Instruction *Member = Group->getMember(I);
+    // Skip the gaps in the group.
+    if (!Member)
+      continue;
+
+    auto StrideMask = createStrideMask(I, Factor, State.VF.getFixedValue());
+    Value *StridedVec = State.Builder.CreateShuffleVector(
+        WidenValue, StrideMask, "strided.vec");
+
+    // If this member has different type, cast the result type.
+    if (Member->getType() != ScalarTy) {
+      VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+      StridedVec =
+          createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+    }
+
+    State.set(VPDefs[J], StridedVec);
+    ++J;
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPDeinterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
+  O << Indent << "DEINTERLEAVE with factor " << getFactor();
+  unsigned OpIdx = 0;
+  for (unsigned I = 0; I < getFactor(); ++I) {
+    if (!IG->getMember(I))
+      continue;
+    O << "\n" << Indent << "  ";
+    getVPValue(OpIdx)->printAsOperand(O, SlotTracker);
+    O << " = extract from index " << I;
+    ++OpIdx;
+  }
+}
+#endif
+
+InstructionCost VPDeinterleaveRecipe::computeCost(ElementCount VF,
+                                                  VPCostContext &Ctx) const {
+  assert(0 && "Should not call VPDeinterleaveRecipe::computeCost");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

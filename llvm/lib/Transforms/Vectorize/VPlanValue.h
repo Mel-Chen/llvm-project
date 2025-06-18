@@ -33,6 +33,7 @@ namespace llvm {
 class raw_ostream;
 class Value;
 class VPDef;
+class VPDeinterleaveRecipe;
 struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
@@ -47,6 +48,7 @@ class VPPhiAccessors;
 class VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
+  friend class VPDeinterleaveRecipe;
   friend class VPInterleaveRecipe;
   friend class VPlan;
 
@@ -328,6 +330,7 @@ public:
   /// type identification.
   using VPRecipeTy = enum {
     VPBranchOnMaskSC,
+    VPDeinterleaveSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
     VPIRInstructionSC,
