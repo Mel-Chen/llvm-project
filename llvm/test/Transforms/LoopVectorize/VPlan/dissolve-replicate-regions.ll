@@ -148,10 +148,11 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%12>/vp<[[VP5]]>
 ; VECTOR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP7]]>
 ; VECTOR-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
-; VECTOR-NEXT:      vp<[[VP14:%[0-9]+]]> = vector-pointer ir<%gep.dst>
-; VECTOR-NEXT:      vp<[[VP15:%[0-9]+]]> = vector-pointer ir<%gep.dst>, vp<[[VP13]]>
-; VECTOR-NEXT:      WIDEN store vp<[[VP14]]>, ir<%pred.val>
-; VECTOR-NEXT:      WIDEN store vp<[[VP15]]>, ir<%pred.val>.1
+; VECTOR-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = mul vp<[[VP13]]>, ir<1>
+; VECTOR-NEXT:      vp<[[VP15:%[0-9]+]]> = vector-pointer ir<%gep.dst>, ir<1>
+; VECTOR-NEXT:      vp<[[VP16:%[0-9]+]]> = vector-pointer ir<%gep.dst>, ir<1>, vp<[[VP14]]>
+; VECTOR-NEXT:      WIDEN store vp<[[VP15]]>, ir<%pred.val>
+; VECTOR-NEXT:      WIDEN store vp<[[VP16]]>, ir<%pred.val>.1
 ; VECTOR-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; VECTOR-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; VECTOR-NEXT:    No successors
