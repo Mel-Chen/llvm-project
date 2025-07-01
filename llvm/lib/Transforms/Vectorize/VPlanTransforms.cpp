@@ -2239,7 +2239,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           NumDefVal <= 1 &&
           "Only supports recipes with a single definition or without users.");
       EVLRecipe->insertBefore(CurRecipe);
-      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
+      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe,
+              VPWidenStridedLoadRecipe>(EVLRecipe)) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
