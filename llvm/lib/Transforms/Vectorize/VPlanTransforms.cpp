@@ -2664,6 +2664,61 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
     R->dissolveToCFGLoop();
 }
 
+void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
+                                               VFRange &Range) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  SmallVector<VPRecipeBase *> ToErase;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      // TODO: support strided store
+      if (!MemR || !isa<VPWidenLoadRecipe>(MemR) || MemR->isConsecutive())
+        continue;
+
+      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(MemR->getAddr());
+      if (!Ptr)
+        continue;
+
+      // Memory cost model requires the pointer operand of memory access
+      // instruction.
+      Value *PtrUV = Ptr->getUnderlyingValue();
+      if (!PtrUV)
+        continue;
+
+      // !!! get base and stride here
+
+      Instruction &Ingredient = MemR->getIngredient();
+      Type *ElementTy = getLoadStoreType(&Ingredient);
+
+      /*auto IsProfitable = [&](ElementCount VF) -> bool {
+        Type *DataTy = toVectorTy(ElementTy, VF);
+        const Align Alignment = getLoadStoreAlignment(&Ingredient);
+        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+          return false;
+        const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
+        const InstructionCost StridedLoadStoreCost =
+            Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, DataTy, PtrUV,
+                                           MemR->isMasked(), Alignment,
+                                           Ctx.CostKind, &Ingredient);
+        return StridedLoadStoreCost < CurrentCost;
+      };
+
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                              Range))
+        continue;
+      */
+
+      // !!! gen VPVectorPointer for base and VPWidenStridedLoad
+    }
+  }
+
+  for (VPRecipeBase *R : ToErase)
+    R->eraseFromParent();
+}
+
 // Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
 static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
   VPWidenCastRecipe *Ext;
