@@ -53,6 +53,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -106,6 +107,9 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
+  case VPInterleaveEVLSC:
+  case VPInterleaveSC:
+    return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() == 0;
   case VPReplicateSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
@@ -182,6 +186,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
            "underlying instruction has side-effects");
     return false;
   }
+  case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return mayWriteToMemory();
   case VPWidenLoadEVLSC:
@@ -3666,6 +3671,229 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                                            VectorTy, VectorTy, {}, Ctx.CostKind,
                                            0);
 }
+
+void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
+  assert(!State.Lane && "Interleave group being replicated.");
+  const InterleaveGroup<Instruction> *Group = getInterleaveGroup();
+  Instruction *Instr = Group->getInsertPos();
+
+  // Prepare for the vector type of the interleaved load/store.
+  Type *ScalarTy = getLoadStoreType(Instr);
+  unsigned InterleaveFactor = Group->getFactor();
+  auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
+
+  // TODO: extend the masked interleaved-group support to reversed access.
+  VPValue *BlockInMask = getMask();
+  assert((!BlockInMask || !Group->isReverse()) &&
+         "Reversed masked interleave-group not supported.");
+
+  VPValue *Addr = getAddr();
+  Value *ResAddr = State.get(Addr, VPLane(0));
+  if (auto *I = dyn_cast<Instruction>(ResAddr))
+    State.setDebugLocFrom(I->getDebugLoc());
+
+  State.setDebugLocFrom(getDebugLoc());
+  Value *PoisonVec = PoisonValue::get(VecTy);
+
+  auto CreateGroupMask = [&BlockInMask, &State,
+                          &InterleaveFactor](Value *MaskForGaps) -> Value * {
+    if (State.VF.isScalable()) {
+      assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
+      assert(InterleaveFactor <= 8 &&
+             "Unsupported deinterleave factor for scalable vectors");
+      auto *ResBlockInMask = State.get(BlockInMask);
+      SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
+      return interleaveVectors(State.Builder, Ops, "interleaved.mask");
+    }
+
+    if (!BlockInMask)
+      return MaskForGaps;
+
+    Value *ResBlockInMask = State.get(BlockInMask);
+    Value *ShuffledMask = State.Builder.CreateShuffleVector(
+        ResBlockInMask,
+        createReplicatedMask(InterleaveFactor, State.VF.getFixedValue()),
+        "interleaved.mask");
+    return MaskForGaps ? State.Builder.CreateBinOp(Instruction::And,
+                                                   ShuffledMask, MaskForGaps)
+                       : ShuffledMask;
+  };
+
+  const DataLayout &DL = Instr->getDataLayout();
+  // Vectorize the interleaved load group.
+  if (isa<LoadInst>(Instr)) {
+    Value *MaskForGaps = nullptr;
+    if (NeedsMaskForGaps) {
+      MaskForGaps =
+          createBitMaskForGaps(State.Builder, State.VF.getFixedValue(), *Group);
+      assert(MaskForGaps && "Mask for Gaps is required but it is null");
+    }
+
+    Instruction *NewLoad;
+    if (BlockInMask || MaskForGaps) {
+      Value *GroupMask = CreateGroupMask(MaskForGaps);
+      NewLoad = State.Builder.CreateMaskedLoad(VecTy, ResAddr,
+                                               Group->getAlign(), GroupMask,
+                                               PoisonVec, "wide.masked.vec");
+    } else
+      NewLoad = State.Builder.CreateAlignedLoad(VecTy, ResAddr,
+                                                Group->getAlign(), "wide.vec");
+    Group->addMetadata(NewLoad);
+
+    ArrayRef<VPValue *> VPDefs = definedValues();
+    const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
+    if (VecTy->isScalableTy()) {
+      // Scalable vectors cannot use arbitrary shufflevectors (only splats),
+      // so must use intrinsics to deinterleave.
+      assert(InterleaveFactor <= 8 &&
+             "Unsupported deinterleave factor for scalable vectors");
+      Value *Deinterleave = State.Builder.CreateIntrinsic(
+          getDeinterleaveIntrinsicID(InterleaveFactor), NewLoad->getType(),
+          NewLoad,
+          /*FMFSource=*/nullptr, "strided.vec");
+
+      for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
+        Instruction *Member = Group->getMember(I);
+        Value *StridedVec = State.Builder.CreateExtractValue(Deinterleave, I);
+        if (!Member) {
+          // This value is not needed as it's not used
+          cast<Instruction>(StridedVec)->eraseFromParent();
+          continue;
+        }
+        // If this member has different type, cast the result type.
+        if (Member->getType() != ScalarTy) {
+          VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+          StridedVec =
+              createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+        }
+
+        if (Group->isReverse())
+          StridedVec = State.Builder.CreateVectorReverse(StridedVec, "reverse");
+
+        State.set(VPDefs[J], StridedVec);
+        ++J;
+      }
+
+      return;
+    }
+    assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+
+    // For each member in the group, shuffle out the appropriate data from the
+    // wide loads.
+    unsigned J = 0;
+    for (unsigned I = 0; I < InterleaveFactor; ++I) {
+      Instruction *Member = Group->getMember(I);
+
+      // Skip the gaps in the group.
+      if (!Member)
+        continue;
+
+      auto StrideMask =
+          createStrideMask(I, InterleaveFactor, State.VF.getFixedValue());
+      Value *StridedVec =
+          State.Builder.CreateShuffleVector(NewLoad, StrideMask, "strided.vec");
+
+      // If this member has different type, cast the result type.
+      if (Member->getType() != ScalarTy) {
+        VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+        StridedVec =
+            createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+      }
+
+      if (Group->isReverse())
+        StridedVec = State.Builder.CreateVectorReverse(StridedVec, "reverse");
+
+      State.set(VPDefs[J], StridedVec);
+      ++J;
+    }
+    return;
+  }
+
+  // The sub vector type for current instruction.
+  auto *SubVT = VectorType::get(ScalarTy, State.VF);
+
+  // Vectorize the interleaved store group.
+  Value *MaskForGaps =
+      createBitMaskForGaps(State.Builder, State.VF.getKnownMinValue(), *Group);
+  assert((!MaskForGaps || !State.VF.isScalable()) &&
+         "masking gaps for scalable vectors is not yet supported.");
+  ArrayRef<VPValue *> StoredValues = getStoredValues();
+  // Collect the stored vector from each member.
+  SmallVector<Value *, 4> StoredVecs;
+  unsigned StoredIdx = 0;
+  for (unsigned i = 0; i < InterleaveFactor; i++) {
+    assert((Group->getMember(i) || MaskForGaps) &&
+           "Fail to get a member from an interleaved store group");
+    Instruction *Member = Group->getMember(i);
+
+    // Skip the gaps in the group.
+    if (!Member) {
+      Value *Undef = PoisonValue::get(SubVT);
+      StoredVecs.push_back(Undef);
+      continue;
+    }
+
+    Value *StoredVec = State.get(StoredValues[StoredIdx]);
+    ++StoredIdx;
+
+    if (Group->isReverse())
+      StoredVec = State.Builder.CreateVectorReverse(StoredVec, "reverse");
+
+    // If this member has different type, cast it to a unified type.
+
+    if (StoredVec->getType() != SubVT)
+      StoredVec = createBitOrPointerCast(State.Builder, StoredVec, SubVT, DL);
+
+    StoredVecs.push_back(StoredVec);
+  }
+
+  // Interleave all the smaller vectors into one wider vector.
+  Value *IVec = interleaveVectors(State.Builder, StoredVecs, "interleaved.vec");
+  Instruction *NewStoreInstr;
+  if (BlockInMask || MaskForGaps) {
+    Value *GroupMask = CreateGroupMask(MaskForGaps);
+    NewStoreInstr = State.Builder.CreateMaskedStore(
+        IVec, ResAddr, Group->getAlign(), GroupMask);
+  } else
+    NewStoreInstr =
+        State.Builder.CreateAlignedStore(IVec, ResAddr, Group->getAlign());
+
+  Group->addMetadata(NewStoreInstr);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPInterleaveEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  const InterleaveGroup<Instruction> *IG = getInterleaveGroup();
+  O << Indent << "INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
+  IG->getInsertPos()->printAsOperand(O, false);
+  O << ", ";
+  getAddr()->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getEVL()->printAsOperand(O, SlotTracker);
+  VPValue *Mask = getMask();
+  if (Mask) {
+    O << ", ";
+    Mask->printAsOperand(O, SlotTracker);
+  }
+
+  unsigned OpIdx = 0;
+  for (unsigned i = 0; i < IG->getFactor(); ++i) {
+    if (!IG->getMember(i))
+      continue;
+    if (getNumStoreOperands() > 0) {
+      O << "\n" << Indent << "  vp.store ";
+      getOperand(2 + OpIdx)->printAsOperand(O, SlotTracker);
+      O << " to index " << i;
+    } else {
+      O << "\n" << Indent << "  ";
+      getVPValue(OpIdx)->printAsOperand(O, SlotTracker);
+      O << " = vp.load from index " << i;
+    }
+    ++OpIdx;
+  }
+}
+#endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,

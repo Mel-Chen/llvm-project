@@ -555,6 +555,7 @@ public:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
+    case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
@@ -2338,14 +2339,14 @@ class VPInterleaveRecipe : public VPRecipeBase {
   /// unusued gaps can be loaded speculatively.
   bool NeedsMaskForGaps = false;
 
-public:
-  VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
+protected:
+  VPInterleaveRecipe(const unsigned char SC,
+                     const InterleaveGroup<Instruction> *IG,
+                     ArrayRef<VPValue *> Operands,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask,
                      bool NeedsMaskForGaps, DebugLoc DL)
-      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr},
-                     DL),
-
-        IG(IG), NeedsMaskForGaps(NeedsMaskForGaps) {
+      : VPRecipeBase(SC, Operands, DL), IG(IG),
+        NeedsMaskForGaps(NeedsMaskForGaps) {
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
         if (I->getType()->isVoidTy())
@@ -2360,6 +2361,14 @@ public:
       addOperand(Mask);
     }
   }
+
+public:
+  VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
+                     ArrayRef<VPValue *> StoredValues, VPValue *Mask,
+                     bool NeedsMaskForGaps, DebugLoc DL)
+      : VPInterleaveRecipe(VPDef::VPInterleaveSC, IG,
+                           ArrayRef<VPValue *>({Addr}), StoredValues, Mask,
+                           NeedsMaskForGaps, DL) {}
   ~VPInterleaveRecipe() override = default;
 
   VPInterleaveRecipe *clone() override {
@@ -2367,7 +2376,10 @@ public:
                                   NeedsMaskForGaps, getDebugLoc());
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPInterleaveSC ||
+           R->getVPDefID() == VPRecipeBase::VPInterleaveEVLSC;
+  }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
@@ -2383,12 +2395,15 @@ public:
 
   /// Return the VPValues stored by this interleave group. If it is a load
   /// interleave group, return an empty ArrayRef.
-  ArrayRef<VPValue *> getStoredValues() const {
+  virtual ArrayRef<VPValue *> getStoredValues() const {
     // The first operand is the address, followed by the stored values, followed
     // by an optional mask.
     return ArrayRef<VPValue *>(op_begin(), getNumOperands())
         .slice(1, getNumStoreOperands());
   }
+
+  /// Return true if the access needs a mask because of the gaps.
+  bool needsMaskForGaps() const { return NeedsMaskForGaps; }
 
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
@@ -2403,11 +2418,11 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
+  const InterleaveGroup<Instruction> *getInterleaveGroup() const { return IG; }
 
   /// Returns the number of stored operands of this interleave group. Returns 0
   /// for load interleave groups.
-  unsigned getNumStoreOperands() const {
+  virtual unsigned getNumStoreOperands() const {
     return getNumOperands() - (HasMask ? 2 : 1);
   }
 
@@ -2419,6 +2434,58 @@ public:
   }
 
   Instruction *getInsertPos() const { return IG->getInsertPos(); }
+};
+
+class VPInterleaveEVLRecipe : public VPInterleaveRecipe {
+public:
+  VPInterleaveEVLRecipe(VPInterleaveRecipe &R, VPValue &EVL, VPValue *Mask,
+                        DebugLoc DL = {})
+      : VPInterleaveRecipe(VPDef::VPInterleaveEVLSC, R.getInterleaveGroup(),
+                           ArrayRef<VPValue *>({R.getAddr(), &EVL}),
+                           R.getStoredValues(), Mask, R.needsMaskForGaps(),
+                           DL) {}
+
+  ~VPInterleaveEVLRecipe() override = default;
+
+  VPInterleaveEVLRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPInterleaveEVLSC)
+
+  /// The VPValue of the explicit vector length.
+  VPValue *getEVL() const { return getOperand(1); }
+
+  /// Return the VPValues stored by this interleave group. If it is a load
+  /// interleave group, return an empty ArrayRef.
+  ArrayRef<VPValue *> getStoredValues() const override {
+    // The first operand is the address, and the second operand is EVL, followed
+    // by the stored values, followe by an optional mask.
+    return ArrayRef<VPValue *>(op_begin(), getNumOperands())
+        .slice(2, getNumStoreOperands());
+  }
+
+  /// Generate the wide load or store, and shuffles.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns the number of stored operands of this interleave group. Returns 0
+  /// for load interleave groups.
+  unsigned getNumStoreOperands() const override {
+    return VPInterleaveRecipe::getNumStoreOperands() - 1;
+  }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return VPInterleaveRecipe::onlyFirstLaneUsed(Op) || Op == getEVL();
+  }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on

@@ -334,6 +334,7 @@ public:
     VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
+    VPInterleaveEVLSC,
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
