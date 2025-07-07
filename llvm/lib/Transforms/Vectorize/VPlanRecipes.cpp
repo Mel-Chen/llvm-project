@@ -2533,8 +2533,14 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
   Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
   Value *Ptr = State.get(getOperand(0), VPLane(0));
+  Value *Stride = State.get(getStride(), /*IsScalar*/ true);
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
+  auto *StrideC = dyn_cast<ConstantInt>(Stride);
+  if (!StrideC || !StrideC->isOne()) {
+    Stride = Builder.CreateSExtOrTrunc(Stride, IndexTy);
+    Increment = Builder.CreateMul(Increment, Stride);
+  }
   Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Increment,
                                        "", getGEPNoWrapFlags());
 
@@ -3493,8 +3499,10 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     if (isa<VPWidenStridedLoadRecipe>(this))
-      return Ctx.TTI.getStridedMemoryOpCost(
-          Opcode, Ty, Ptr, IsMasked, Alignment, Ctx.CostKind, &Ingredient);
+      return Ctx.TTI.getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                     Ty, Ptr, IsMasked, Alignment, &Ingredient),
+          Ctx.CostKind);
 
     Type *PtrTy = Ptr->getType();
     // If the address value is uniform across all lanes, then the address can be
@@ -3686,8 +3694,8 @@ void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenStridedLoadRecipe::print(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const {
+void VPWidenStridedLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
+                                           VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = load ";
