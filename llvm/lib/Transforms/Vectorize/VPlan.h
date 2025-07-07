@@ -1972,19 +1972,22 @@ protected:
 #endif
 };
 
-/// A recipe to compute the pointers for widened memory accesses of IndexTy.
+/// A recipe to compute the pointers for widened memory accesses of IndexedTy,
+/// with the Stride expressed in units of IndexedTy.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<1> {
+                              public VPUnrollPartAccessor<2> {
   Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
+  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
                         GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlags, DL),
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, Stride}), GEPFlags, DL),
         SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  VPValue *getStride() const { return getOperand(1); }
 
   void execute(VPTransformState &State) override;
 
@@ -2006,7 +2009,8 @@ public:
 
   VPVectorPointerRecipe *clone() override {
     return new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
-                                     getGEPNoWrapFlags(), getDebugLoc());
+                                     getStride(), getGEPNoWrapFlags(),
+                                     getDebugLoc());
   }
 
   /// Return true if this VPVectorPointerRecipe corresponds to part 0. Note that
@@ -3455,12 +3459,12 @@ struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getAddr() || Op == getStride() || Op == getVF();
