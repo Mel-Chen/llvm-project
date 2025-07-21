@@ -2,14 +2,15 @@
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-tail-folding-style=data-with-evl \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -enable-masked-interleaved-mem-accesses=true \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-tail-folding-style=none \
 ; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -enable-masked-interleaved-mem-accesses=true \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=NO-VP %s
 
-; FIXME: interleaved accesses are not supported yet with predicated vectorization.
 define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-LABEL: @interleave(
 ; IF-EVL-NEXT:  entry:
@@ -163,6 +164,8 @@ for.cond.cleanup:
   ret void
 }
 
-!0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.interleave.count", i32 2}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+;!0 = distinct !{!0, !1, !2}
+;!1 = !{!"llvm.loop.interleave.count", i32 2}
+;!2 = !{!"llvm.loop.vectorize.enable", i1 true}

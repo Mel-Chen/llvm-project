@@ -2154,6 +2154,10 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(S->getMask());
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
       })
+      .Case<VPInterleaveRecipe>([&](VPInterleaveRecipe *IR) {
+        VPValue *NewMask = GetNewMask(IR->getMask());
+        return new VPInterleaveEVLRecipe(*IR, EVL, NewMask, IR->getDebugLoc());
+      })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);

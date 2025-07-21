@@ -4184,6 +4184,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenIntOrFpInductionSC:
       case VPDef::VPWidenPointerInductionSC:
       case VPDef::VPReductionPHISC:
+      case VPDef::VPInterleaveEVLSC:
       case VPDef::VPInterleaveSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
@@ -4212,7 +4213,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
 
       // If no def nor is a store, e.g., branches, continue - no value to check.
       if (R.getNumDefinedValues() == 0 &&
-          !isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveRecipe>(
+          !isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveBase>(
               &R))
         continue;
       // For multi-def recipes, currently only interleaved loads, suffice to
