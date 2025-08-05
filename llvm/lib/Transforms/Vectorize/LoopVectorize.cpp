@@ -5374,10 +5374,11 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   bool UseMaskForGaps =
       (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
       (isa<StoreInst>(I) && !Group->isFull());
-  InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
+  /*InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
       Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
-      UseMaskForGaps);
+      UseMaskForGaps);*/
+  InstructionCost Cost = 1;
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
