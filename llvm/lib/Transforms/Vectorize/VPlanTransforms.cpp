@@ -2170,32 +2170,6 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       .Default([&](VPRecipeBase *R) { return nullptr; });
 }
 
-static void convertToEVLReverse(VPlan &Plan, VPTypeAnalysis &TypeInfo,
-                                VPValue &AllOneMask, VPValue &EVL) {
-  SmallVector<VPRecipeBase *> ToRemove;
-
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI || VPI->getOpcode() != VPInstruction::Reverse)
-        continue;
-
-      SmallVector<VPValue *> Ops(VPI->operands());
-      Ops.append({&AllOneMask, &EVL});
-      auto *NewReverse = new VPWidenIntrinsicRecipe(
-          Intrinsic::experimental_vp_reverse, Ops,
-          TypeInfo.inferScalarType(VPI), VPI->getDebugLoc());
-      NewReverse->insertBefore(VPI);
-      VPI->replaceAllUsesWith(NewReverse);
-      ToRemove.push_back(VPI);
-    }
-  }
-
-  for (VPRecipeBase *R : ToRemove)
-    R->eraseFromParent();
-}
-
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
@@ -2206,10 +2180,20 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   assert(all_of(Plan.getVF().users(),
-                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                        VPWidenIntOrFpInductionRecipe>) &&
+                [](VPUser *U) {
+                  return isa<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                             VPWidenIntOrFpInductionRecipe>(U) ||
+                         (isa<VPInstruction>(U) &&
+                          cast<VPInstruction>(U)->getOpcode() ==
+                              VPInstruction::Reverse);
+                }) &&
          "User of VF that we can't transform to EVL.");
-  Plan.getVF().replaceAllUsesWith(&EVL);
+  VPDominatorTree VPDT(Plan);
+  Plan.getVF().replaceUsesWithIf(&EVL, [&VPDT, &EVL](VPUser &U, unsigned) {
+    auto *R = cast<VPRecipeBase>(&U);
+    return VPDT.properlyDominates(EVL.getDefiningRecipe(), R) ||
+           isa<VPHeaderPHIRecipe>(R);
+  });
 
   assert(all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
@@ -2309,7 +2293,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     HeaderMask->replaceAllUsesWith(EVLMask);
     ToErase.push_back(HeaderMask->getDefiningRecipe());
   }
-  convertToEVLReverse(Plan, TypeInfo, *AllOneMask, EVL);
 
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());

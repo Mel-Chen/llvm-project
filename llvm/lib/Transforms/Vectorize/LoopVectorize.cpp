@@ -7800,7 +7800,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
                               VPIRMetadata(*Load, LVer), Load->getDebugLoc());
     if (Reverse) {
       Builder.insert(LoadR);
-      return new VPInstruction(VPInstruction::Reverse, {LoadR},
+      return new VPInstruction(VPInstruction::Reverse, {LoadR, &Plan.getVF()},
                                LoadR->getDebugLoc());
     }
     return LoadR;
@@ -7809,8 +7809,9 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
   auto *Store = cast<StoreInst>(I);
   VPValue *StoredVal = Operands[0];
   if (Reverse)
-    StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
-                                     Store->getDebugLoc());
+    StoredVal =
+        Builder.createNaryOp(VPInstruction::Reverse, {StoredVal, &Plan.getVF()},
+                             Store->getDebugLoc());
   return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
                                 Reverse, VPIRMetadata(*Store, LVer),
                                 Store->getDebugLoc());

@@ -466,7 +466,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
-  case VPInstruction::Reverse:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -477,6 +476,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
+  case VPInstruction::Reverse:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
     return 2;
@@ -552,6 +552,17 @@ static BranchInst *createCondBranch(Value *Cond, VPBasicBlock *VPBB,
   CondBr->setSuccessor(0, nullptr);
   IRBB->getTerminator()->eraseFromParent();
   return CondBr;
+}
+
+/// Use all-true mask for reverse rather than actual mask, as it avoids a
+/// dependence w/o affecting the result.
+static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
+                                     Value *EVL, const Twine &Name) {
+  VectorType *ValTy = cast<VectorType>(Operand->getType());
+  Value *AllTrueMask =
+      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
+  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
+                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
 }
 
 Value *VPInstruction::generate(VPTransformState &State) {
@@ -923,8 +934,15 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return Res;
   }
-  case VPInstruction::Reverse:
-    return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
+  case VPInstruction::Reverse: {
+    assert(State.VF.isVector() && "Only able to reverse vector");
+    Value *Vec = State.get(getOperand(0));
+    VPValue *ActiveLanes = getOperand(1);
+    if (ActiveLanes == &getParent()->getPlan()->getVF())
+      return Builder.CreateVectorReverse(Vec, "reverse");
+    return createReverseEVL(
+        Builder, Vec, State.get(ActiveLanes, /*IsScalar=*/true), "vp.reverse");
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1144,6 +1162,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return Op == getOperand(0);
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
+  case VPInstruction::Reverse:
     return Op == getOperand(1);
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
@@ -3173,17 +3192,6 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
-
-/// Use all-true mask for reverse rather than actual mask, as it avoids a
-/// dependence w/o affecting the result.
-static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
-                                     Value *EVL, const Twine &Name) {
-  VectorType *ValTy = cast<VectorType>(Operand->getType());
-  Value *AllTrueMask =
-      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
-  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
-                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
-}
 
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
