@@ -1946,9 +1946,9 @@ void VPlanTransforms::optimize1(VPlan &Plan) {
   runPass(legalizeAndOptimizeInductions, Plan);
   //^ 
   runPass(removeRedundantExpandSCEVRecipes, Plan);
-  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
 }
 void VPlanTransforms::optimize2(VPlan &Plan) {
+  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
   runPass(removeBranchOnConst, Plan);
   runPass(removeDeadRecipes, Plan);
 
