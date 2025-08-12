@@ -1950,10 +1950,10 @@ void VPlanTransforms::optimize1(VPlan &Plan) {
   runPass(removeBranchOnConst, Plan);
   runPass(removeDeadRecipes, Plan);
   //^
-  runPass(createAndOptimizeReplicateRegions, Plan);
 }
 void VPlanTransforms::optimize2(VPlan &Plan) {
 
+  runPass(createAndOptimizeReplicateRegions, Plan);
   runPass(mergeBlocksIntoPredecessors, Plan);
   runPass(licm, Plan);
 }
