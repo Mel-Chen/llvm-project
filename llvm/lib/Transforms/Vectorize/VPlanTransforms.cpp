@@ -1948,10 +1948,9 @@ void VPlanTransforms::optimize1(VPlan &Plan) {
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
   runPass(removeBranchOnConst, Plan);
-  runPass(removeDeadRecipes, Plan);
-  //^
 }
 void VPlanTransforms::optimize2(VPlan &Plan) {
+  runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);
   runPass(mergeBlocksIntoPredecessors, Plan);
