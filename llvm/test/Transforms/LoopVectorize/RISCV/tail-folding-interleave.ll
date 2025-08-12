@@ -15,6 +15,7 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
+; IF-EVL-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -22,7 +23,6 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp ult <vscale x 4 x i32> [[TMP16]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x i32], ptr [[B:%.*]], i64 [[EVL_BASED_IV]], i32 0
 ; IF-EVL-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[TMP17]], <vscale x 4 x i1> [[TMP17]])

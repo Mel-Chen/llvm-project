@@ -1935,6 +1935,29 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(licm, Plan);
 }
 
+void VPlanTransforms::optimize1(VPlan &Plan) {
+  runPass(removeRedundantCanonicalIVs, Plan);
+  runPass(removeRedundantInductionCasts, Plan);
+
+  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(simplifyBlends, Plan);
+  runPass(removeDeadRecipes, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
+  runPass(legalizeAndOptimizeInductions, Plan);
+  //^ 
+  runPass(removeRedundantExpandSCEVRecipes, Plan);
+  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(removeBranchOnConst, Plan);
+  runPass(removeDeadRecipes, Plan);
+  //^
+  runPass(createAndOptimizeReplicateRegions, Plan);
+  runPass(mergeBlocksIntoPredecessors, Plan);
+}
+void VPlanTransforms::optimize2(VPlan &Plan) {
+
+  runPass(licm, Plan);
+}
+
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
 // the loop terminator with a branch-on-cond recipe with the negated
 // active-lane-mask as operand. Note that this turns the loop into an

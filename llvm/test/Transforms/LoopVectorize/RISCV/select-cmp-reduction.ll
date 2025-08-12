@@ -360,6 +360,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -368,7 +369,6 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP17]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ult <vscale x 4 x i32> [[TMP18]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP17]])
