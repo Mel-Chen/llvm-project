@@ -2425,6 +2425,32 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPValue &AllOneMask, VPValue &EVL) {
   // FIXME: Don't transform recipes to EVL recipes if they're not masked by the
   // header mask.
+  auto GetAndTreeOperand = [&](VPValue *Mask) -> SmallPtrSet<VPValue *, 2> {
+    SmallPtrSet<VPValue *, 2> Operands;
+    SmallVector<VPValue *, 2> Worklist;
+    Worklist.push_back(Mask);
+    while (!Worklist.empty()) {
+      VPValue *Cur = Worklist.pop_back_val();
+      VPValue *Op1, *Op2;
+      if (match(Cur, m_LogicalAnd(m_VPValue(Op1), m_VPValue(Op2)))) {
+        Worklist.append({Op1, Op2});
+        continue;
+      }
+      Operands.insert(Cur);
+    }
+    return Operands;
+  };
+  auto IsTheSameMaskTree = [&](VPValue *New, VPValue *Legacy) -> bool {
+    if (New == Legacy)
+      return true;
+    return GetAndTreeOperand(New) == GetAndTreeOperand(Legacy);
+  };
+  auto GetNewMaskLegacy = [&](VPValue *OrigMask) -> VPValue * {
+    VPValue *Mask;
+    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+      return Mask;
+    return HeaderMask == OrigMask ? nullptr : OrigMask;
+  };
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
@@ -2489,20 +2515,32 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
       .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
         VPValue *NewMask = GetNewMask(L->getMask());
+        VPValue *NewMaskLegacy = GetNewMaskLegacy(L->getMask());
+        assert(IsTheSameMaskTree(NewMask, NewMaskLegacy) &&
+               "!!! Here is a case for the patch");
         VPValue *NewAddr = GetNewAddr(L->getAddr());
         return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
       })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
+        VPValue *NewMaskLegacy = GetNewMaskLegacy(S->getMask());
+        assert(IsTheSameMaskTree(NewMask, NewMaskLegacy) &&
+               "!!! Here is a case for the patch");
         VPValue *NewAddr = GetNewAddr(S->getAddr());
         return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
       })
       .Case<VPInterleaveRecipe>([&](VPInterleaveRecipe *IR) {
         VPValue *NewMask = GetNewMask(IR->getMask());
+        VPValue *NewMaskLegacy = GetNewMaskLegacy(IR->getMask());
+        assert(IsTheSameMaskTree(NewMask, NewMaskLegacy) &&
+               "!!! Here is a case for the patch");
         return new VPInterleaveEVLRecipe(*IR, EVL, NewMask);
       })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
+        VPValue *NewMaskLegacy = GetNewMaskLegacy(Red->getCondOp());
+        assert(IsTheSameMaskTree(NewMask, NewMaskLegacy) &&
+               "!!! Here is a case for the patch");
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
