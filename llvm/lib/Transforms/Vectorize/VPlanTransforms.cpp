@@ -1682,6 +1682,15 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
         if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
           return R->isCanonical();
+        if (auto *R = dyn_cast<VPReductionPHIRecipe>(&Phi))
+          return none_of(R->users(), [](VPUser *U) {
+            auto *UserR = dyn_cast<VPInstruction>(U);
+            if (!UserR)
+              return false;
+            return UserR->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+                   UserR->getOpcode() == VPInstruction::ComputeFindIVResult ||
+                   UserR->getOpcode() == VPInstruction::ComputeReductionResult;
+          });
         return isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
                    VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
       })) {
