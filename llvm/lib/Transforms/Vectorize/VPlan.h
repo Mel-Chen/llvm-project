@@ -1976,6 +1976,7 @@ public:
     return VarIdx;
   }
 
+  /// Returns the element type for the first \p I indices of this recipe.
   Type *getIndexedType(unsigned I) const {
     auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
     SmallVector<Value *, 4> Ops(GEP->idx_begin(), GEP->idx_begin() + I);
@@ -3548,9 +3549,9 @@ protected:
 #endif
 };
 
-/// A recipe for strided load operations, using the base address, stride, and an
-/// optional mask. This recipe will generate an vp.strided.load intrinsic call
-/// to represent memory accesses with a fixed stride.
+/// A recipe for strided load operations, using the base address, stride, VF,
+/// and an optional mask. This recipe will generate a vp.strided.load intrinsic
+/// call to represent memory accesses with a fixed stride.
 struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
                                         public VPRecipeValue {
   VPWidenStridedLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Stride,
@@ -3590,6 +3591,7 @@ struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
+    // All operands except the mask are only used for the first lane.
     return Op == getAddr() || Op == getStride() || Op == getVF();
   }
 };
