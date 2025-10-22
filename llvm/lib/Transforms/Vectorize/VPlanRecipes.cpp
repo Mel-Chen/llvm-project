@@ -3619,11 +3619,9 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  unsigned Opcode =
-      isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe, VPWidenStridedLoadRecipe>(
-          this)
-          ? Instruction::Load
-          : Instruction::Store;
+  unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
+                        ? Instruction::Load
+                        : Instruction::Store;
 
   if (!Consecutive) {
     // TODO: Using the original IR may not be accurate.
@@ -3633,12 +3631,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
            "Inconsecutive memory access should not have the order.");
 
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
-    if (isa<VPWidenStridedLoadRecipe>(this))
-      return Ctx.TTI.getMemIntrinsicInstrCost(
-          MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
-                                     Ty, Ptr, IsMasked, Alignment, &Ingredient),
-          Ctx.CostKind);
-
     Type *PtrTy = Ptr->getType();
     // If the address value is uniform across all lanes, then the address can be
     // calculated with scalar type and broadcast.
@@ -3811,6 +3803,18 @@ void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   applyMetadata(*NewLI);
   State.set(this, NewLI);
+}
+
+InstructionCost
+VPWidenStridedLoadRecipe::computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const {
+  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  return Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load, Ty,
+                                 Ptr, IsMasked, Alignment, &Ingredient),
+      Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
