@@ -334,7 +334,7 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i16, ptr [[SRC]], <vscale x 8 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vp.strided.load.nxv8i16.p0.i64(ptr align 2 [[TMP21]], i64 6, <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]])
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vp.strided.load.nxv8i16.p0.i64(ptr [[TMP21]], i64 6, <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 8 x i16> [[WIDE_MASKED_GATHER]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> [[TMP8]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP28:%.*]] = xor <vscale x 8 x i1> [[TMP17]], splat (i1 true)

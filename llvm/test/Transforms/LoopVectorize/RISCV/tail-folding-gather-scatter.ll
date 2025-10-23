@@ -18,7 +18,7 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[FOR_BODY1]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[INDEX:%.*]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP5]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
+; IF-EVL-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr [[TMP5]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[IN:%.*]], <vscale x 2 x i64> [[WIDE_STRIDED_LOAD]]
 ; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[OUT:%.*]], <vscale x 2 x i64> [[WIDE_STRIDED_LOAD]]
@@ -44,12 +44,12 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; NO-VP-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; NO-VP-NEXT:    br label [[FOR_BODY1:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT1:%.*]], [[FOR_BODY1]] ]
 ; NO-VP-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[INDEX:%.*]], i64 [[INDVARS_IV1]]
-; NO-VP-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; NO-VP-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[ARRAYIDX3]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
+; NO-VP-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr [[ARRAYIDX3]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
 ; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[IN:%.*]], <vscale x 2 x i64> [[WIDE_STRIDED_LOAD]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> align 4 [[TMP6]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x float> poison)
 ; NO-VP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[OUT:%.*]], <vscale x 2 x i64> [[WIDE_STRIDED_LOAD]]

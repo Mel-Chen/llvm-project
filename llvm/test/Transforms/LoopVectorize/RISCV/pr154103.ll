@@ -21,7 +21,7 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[EVL_BASED_IV]], 7
 ; CHECK-NEXT:    [[IV:%.*]] = add i64 1, [[TMP5]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.p0.i64(ptr align 1 [[GEP]], i64 7, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
+; CHECK-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.p0.i64(ptr [[GEP]], i64 7, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 4 x i8> [[WIDE_STRIDED_LOAD]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> [[TMP8]], <vscale x 4 x i64> splat (i64 1), i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = sdiv <vscale x 4 x i64> zeroinitializer, [[TMP9]]

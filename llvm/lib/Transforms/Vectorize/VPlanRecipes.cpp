@@ -1756,9 +1756,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   assert(VectorF &&
          "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
+  if (auto *CI = dyn_cast_or_null<CallInst>(getUnderlyingValue()))
     CI->getOperandBundlesAsDefs(OpBundles);
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);

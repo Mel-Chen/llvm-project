@@ -1559,14 +1559,14 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   bool MayHaveSideEffects;
 
 public:
-  VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
+  VPWidenIntrinsicRecipe(Instruction &I, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-        VPIRMetadata(CI), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
-        MayReadFromMemory(CI.mayReadFromMemory()),
-        MayWriteToMemory(CI.mayWriteToMemory()),
-        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, I),
+        VPIRMetadata(I), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(I.mayReadFromMemory()),
+        MayWriteToMemory(I.mayWriteToMemory()),
+        MayHaveSideEffects(I.mayHaveSideEffects()) {}
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
@@ -1586,9 +1586,9 @@ public:
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
-    if (Value *CI = getUnderlyingValue())
-      return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
-                                        operands(), ResultTy, getDebugLoc());
+    if (Instruction *I = getUnderlyingInstr())
+      return new VPWidenIntrinsicRecipe(*I, VectorIntrinsicID, operands(),
+                                        ResultTy, getDebugLoc());
     return new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(), ResultTy,
                                       getDebugLoc());
   }
