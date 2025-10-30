@@ -28,6 +28,7 @@ add_llvm_component_library(LLVMVectorize
   VPlanPredicator.cpp
   VPlanRecipes.cpp
   VPlanSLP.cpp
+  VPlanSimplifier.cpp
   VPlanTransforms.cpp
   VPlanUnroll.cpp
   VPlanVerifier.cpp
