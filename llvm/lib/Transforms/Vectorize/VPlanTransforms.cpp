@@ -1180,7 +1180,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // further.
   if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                               m_VPValue(Z))) &&
-      X->hasMoreThanOneUniqueUser())
+      (X->hasMoreThanOneUniqueUser() || vputils::isHeaderMask(X, *Plan)))
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
 
@@ -2310,6 +2310,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
 
+  runPass(removeDeadRecipes, Plan);
   runPass(simplifyRecipes, Plan);
   runPass(removeDeadRecipes, Plan);
   runPass(simplifyBlends, Plan);
