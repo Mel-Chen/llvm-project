@@ -622,7 +622,10 @@ define void @reduction_store(ptr noalias %src, ptr %dst, i1 %x) #2 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <4 x i1> [[BROADCAST_SPLAT]] to <4 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i64
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i64> [[TMP0]], splat (i64 12)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -737,17 +740,15 @@ define i64 @cost_loop_invariant_recipes(i1 %x, i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[TMP0]] to i64
+; CHECK-NEXT:    [[Y:%.*]] = shl i64 [[Y1:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[X:%.*]] = xor i1 [[X1:%.*]], true
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[X]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[BROADCAST_SPLAT]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[BROADCAST_SPLAT2]], [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ splat (i64 1), [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3]] = mul <2 x i64> [[TMP2]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP3]] = mul <2 x i64> [[BROADCAST_SPLAT2]], [[VEC_PHI]]
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> [[TMP3]])

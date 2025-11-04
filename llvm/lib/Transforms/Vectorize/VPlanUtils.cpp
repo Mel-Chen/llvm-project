@@ -291,7 +291,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
            all_of(WidenR->operands(), isSingleScalar);
   }
   if (auto *CastR = dyn_cast<VPWidenCastRecipe>(VPV)) {
-    return PreservesUniformity(CastR->getOpcode()) &&
+    return preservesUniformity(CastR->getOpcode()) &&
            all_of(CastR->operands(), isSingleScalar);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
