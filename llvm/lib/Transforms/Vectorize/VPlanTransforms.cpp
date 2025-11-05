@@ -1372,6 +1372,49 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   }
 }
 
+static VPSingleDefRecipe *narrowToSingleScalarRecipe(VPSingleDefRecipe &R) {
+  if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
+    return nullptr;
+
+  auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+  if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
+    return nullptr;
+
+  auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+  if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+      vputils::isSingleScalar(RepR->getOperand(1))) {
+    auto *Clone = new VPReplicateRecipe(
+        RepR->getUnderlyingInstr(), RepR->operands(), true /*IsSingleScalar*/,
+        nullptr /*Mask*/, *RepR /*Metadata*/);
+    Clone->insertBefore(RepR);
+    unsigned ExtractOpc = vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1))
+                              ? VPInstruction::ExtractLastElement
+                              : VPInstruction::ExtractLastLanePerPart;
+    auto *Ext = new VPInstruction(ExtractOpc, {Clone->getOperand(0)});
+    Ext->insertBefore(Clone);
+    Clone->setOperand(0, Ext);
+    return Clone;
+  }
+
+  // Skip recipes that aren't single scalars or don't have only their
+  // scalar results used. In the latter case, we would introduce extra
+  // broadcasts.
+  if (!vputils::isSingleScalar(RepOrWidenR) ||
+      !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
+        return U->usesScalars(RepOrWidenR) ||
+               match(cast<VPRecipeBase>(U),
+                     m_CombineOr(m_ExtractLastElement(m_VPValue()),
+                                 m_ExtractLastLanePerPart(m_VPValue())));
+      }))
+    return nullptr;
+
+  auto *Clone =
+      new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
+                            RepOrWidenR->operands(), true /*IsSingleScalar*/);
+  Clone->insertBefore(RepOrWidenR);
+  return Clone;
+}
+
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
@@ -1383,49 +1426,12 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
-        continue;
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
-        continue;
-
-      auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
-      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
-          vputils::isSingleScalar(RepR->getOperand(1))) {
-        auto *Clone = new VPReplicateRecipe(
-            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
-        Clone->insertBefore(RepOrWidenR);
-        unsigned ExtractOpc =
-            vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1))
-                ? VPInstruction::ExtractLastElement
-                : VPInstruction::ExtractLastLanePerPart;
-        auto *Ext = new VPInstruction(ExtractOpc, {Clone->getOperand(0)});
-        Ext->insertBefore(Clone);
-        Clone->setOperand(0, Ext);
-        RepR->eraseFromParent();
-        continue;
-      }
-
-      // Skip recipes that aren't single scalars or don't have only their
-      // scalar results used. In the latter case, we would introduce extra
-      // broadcasts.
-      if (!vputils::isSingleScalar(RepOrWidenR) ||
-          !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
-            return U->usesScalars(RepOrWidenR) ||
-                   match(cast<VPRecipeBase>(U),
-                         m_CombineOr(m_ExtractLastElement(m_VPValue()),
-                                     m_ExtractLastLanePerPart(m_VPValue())));
-          }))
-        continue;
-
-      auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
-                                          RepOrWidenR->operands(),
-                                          true /*IsSingleScalar*/);
-      Clone->insertBefore(RepOrWidenR);
-      RepOrWidenR->replaceAllUsesWith(Clone);
-      if (isDeadRecipe(*RepOrWidenR))
-        RepOrWidenR->eraseFromParent();
+      if (auto *DefR = dyn_cast<VPSingleDefRecipe>(&R))
+        if (VPSingleDefRecipe *NewRecipe = narrowToSingleScalarRecipe(*DefR)) {
+          DefR->replaceAllUsesWith(NewRecipe);
+          if (isDeadRecipe(*DefR))
+            DefR->eraseFromParent();
+        }
     }
   }
 }
