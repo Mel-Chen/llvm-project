@@ -649,6 +649,36 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
   return Users.takeVector();
 }
 
+// static SmallVector<VPRecipeBase *> onlyLastLaneUsed(VPValue *V) {
+static bool onlyLastLaneUsed(VPValue *V) {
+  // SmallVector<VPRecipeBase *> RecipesToNarrow;
+  bool IsOnlyLastLaneUsed = false;
+  SetVector<VPUser *> Users;
+  Users.insert_range(V->users());
+  for (unsigned I = 0; I < Users.size(); ++I) {
+    VPRecipeBase *R = cast<VPRecipeBase>(Users[I]);
+    if (isa<VPHeaderPHIRecipe>(R) || R->getNumDefinedValues() == 0)
+      return false;
+    // return {};
+    if (match(R, m_ExtractLastElement(m_VPValue()))) {
+      // RecipesToNarrow.push_back(R);
+      IsOnlyLastLaneUsed = true;
+      continue;
+    }
+
+    auto *WidenR = dyn_cast<VPWidenRecipe>(R);
+    if (!WidenR || !vputils::isSingleScalar(WidenR))
+      return false;
+    // return {};
+
+    // RecipesToNarrow.push_back(WidenR);
+    IsOnlyLastLaneUsed = true;
+    Users.insert_range(WidenR->users());
+  }
+  // return RecipesToNarrow;
+  return IsOnlyLastLaneUsed;
+}
+
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
 /// VPWidenPointerInductionRecipe will generate vectors only. If some users
@@ -717,20 +747,27 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // Replace widened induction with scalar steps for users that only use
     // scalars.
     auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    bool IsOnlyLastLaneUsed = false;
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
-        }))
-      continue;
+        })) {
+      IsOnlyLastLaneUsed = onlyLastLaneUsed(WideIV);
+      if (!IsOnlyLastLaneUsed)
+        continue;
+    }
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+    VPSingleDefRecipe *Steps = createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
         WideIV->getDebugLoc(), Builder);
 
+    if (IsOnlyLastLaneUsed)
+      Steps = Builder.createNaryOp(VPInstruction::ExtractLastElement, {Steps});
+
     // Update scalar users of IV to use Step instead.
-    if (!HasOnlyVectorVFs)
+    if (!HasOnlyVectorVFs || IsOnlyLastLaneUsed)
       WideIV->replaceAllUsesWith(Steps);
     else
       WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
