@@ -4089,6 +4089,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenCastSC:
       case VPDef::VPWidenGEPSC:
       case VPDef::VPWidenIntrinsicSC:
+      case VPDef::VPWidenMemIntrinsicSC:
       case VPDef::VPWidenSC:
       case VPDef::VPWidenSelectSC:
       case VPDef::VPBlendSC:

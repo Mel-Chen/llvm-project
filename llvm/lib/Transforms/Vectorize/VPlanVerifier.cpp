@@ -158,9 +158,10 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
   };
   return all_of(EVL.users(), [this, &VerifyEVLUse](VPUser *U) {
     return TypeSwitch<const VPUser *, bool>(U)
-        .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
-          return VerifyEVLUse(*S, S->getNumOperands() - 1);
-        })
+        .Case<VPWidenIntrinsicRecipe, VPWidenMemIntrinsicRecipe>(
+            [&](const VPRecipeBase *R) {
+              return VerifyEVLUse(*R, R->getNumOperands() - 1);
+            })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
               VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe,
               VPWidenStridedLoadRecipe>(
