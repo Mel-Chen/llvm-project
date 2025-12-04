@@ -2282,7 +2282,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
     };
 
     if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
-      if (match(Recipe, m_VPInstruction<VPInstruction::Reverse>(m_VPValue())))
+      if (match(Recipe, m_Reverse(m_VPValue())))
         Recipe = GetOnlyUser(cast<VPInstruction>(Recipe));
       if (Recipe)
         CCH = ComputeCCH(Recipe);
@@ -2295,8 +2295,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
       CCH = TTI::CastContextHint::Normal;
     else if (auto *Recipe = Operand->getDefiningRecipe()) {
       VPValue *ReverseOp;
-      if (match(Recipe,
-                m_VPInstruction<VPInstruction::Reverse>(m_VPValue(ReverseOp))))
+      if (match(Recipe, m_Reverse(m_VPValue(ReverseOp))))
         Recipe = ReverseOp->getDefiningRecipe();
       if (Recipe)
         CCH = ComputeCCH(Recipe);
