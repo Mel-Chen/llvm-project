@@ -5164,10 +5164,10 @@ static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
                                        /*IsUniform*/ true);
   StartR->insertBefore(WidenR);
 
+  VPBuilder Builder(WidenR);
   unsigned InvIdx = VarIdx == 0 ? 1 : 0;
   auto *StrideR =
-      new VPInstruction(Opcode, {Stride, WidenR->getOperand(InvIdx)});
-  StrideR->insertBefore(WidenR);
+      Builder.createOverflowingOp(Opcode, {Stride, WidenR->getOperand(InvIdx)});
   return {StartR, StrideR};
 }
 
@@ -5286,11 +5286,11 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
             TypeInfo.inferScalarType(&Plan.getVF()), DebugLoc::getUnknown());
       }
 
+      VPBuilder Builder(LoadR);
       // Create a new vector pointer for strided access.
-      auto *NewPtr = new VPVectorPointerRecipe(
+      auto *NewPtr = Builder.createVectorPointer(
           BasePtr, ElementTy, StrideInElement, Ptr->getGEPNoWrapFlags(),
           Ptr->getDebugLoc());
-      NewPtr->insertBefore(LoadR);
 
       const DataLayout &DL = Ingredient.getDataLayout();
       TypeSize TS = DL.getTypeAllocSize(ElementTy);
@@ -5300,10 +5300,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       if (TypeScale != 1) {
         VPValue *ScaleVPV = Plan.getConstantInt(
             TypeInfo.inferScalarType(StrideInElement), TypeScale);
-        auto *ScaledStride =
-            new VPInstruction(Instruction::Mul, {StrideInElement, ScaleVPV});
-        ScaledStride->insertBefore(LoadR);
-        StrideInBytes = ScaledStride;
+        StrideInBytes = Builder.createOverflowingOp(
+            Instruction::Mul, {StrideInElement, ScaleVPV});
       }
 
       VPValue *Mask;
@@ -5311,10 +5309,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
         Mask = LoadMask;
       else
         Mask = Plan.getTrue();
-      auto *StridedLoad = new VPWidenMemIntrinsicRecipe(
+      auto *StridedLoad = Builder.createWidenMemIntrinsic(
           *cast<LoadInst>(&Ingredient), {NewPtr, StrideInBytes, Mask, I32VF},
           *LoadR, LoadR->getDebugLoc());
-      StridedLoad->insertBefore(LoadR);
       LoadR->replaceAllUsesWith(StridedLoad);
 
       ToErase.push_back(LoadR);
