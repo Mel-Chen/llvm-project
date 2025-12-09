@@ -1983,7 +1983,7 @@ VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
   const Value *Ptr = getLoadStorePointerOperand(Ingredient);
   return Ctx.TTI.getMemIntrinsicInstrCost(
       MemIntrinsicCostAttributes(getVectorIntrinsicID(), Ty, Ptr,
-                                 match(getMask(), m_True()), Alignment,
+                                 match(getOperand(2), m_True()), Alignment,
                                  Ingredient),
       Ctx.CostKind);
 }
