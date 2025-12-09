@@ -51,7 +51,6 @@ class LLVM_ABI_FOR_TEST VPValue {
   friend class VPInterleaveBase;
   friend class VPlan;
   friend class VPExpressionRecipe;
-  friend class VPWidenMemIntrinsicRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 

@@ -556,6 +556,7 @@ public:
     case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
+    case VPRecipeBase::VPWidenMemIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
     case VPRecipeBase::VPWidenSelectSC:
     case VPRecipeBase::VPBlendSC:
@@ -572,7 +573,6 @@ public:
     case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
-    case VPRecipeBase::VPWidenMemIntrinsicSC:
     case VPRecipeBase::VPWidenStridedLoadSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
@@ -935,6 +935,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPDefID() == VPRecipeBase::VPWidenCallSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenMemIntrinsicSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSelectSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
@@ -1617,6 +1618,29 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// True if the intrinsic may have side-effects.
   bool MayHaveSideEffects;
 
+protected:
+  VPWidenIntrinsicRecipe(const unsigned char SC,
+                         Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         const VPIRFlags &Flags = {},
+                         const VPIRMetadata &Metadata = {},
+                         DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeWithIRFlags(SC, CallArguments, Flags, DL),
+        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
+        ResultTy(Ty) {
+    LLVMContext &Ctx = Ty->getContext();
+    AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
+    MemoryEffects ME = Attrs.getMemoryEffects();
+    MayReadFromMemory = !ME.onlyWritesMemory();
+    MayWriteToMemory = !ME.onlyReadsMemory();
+    MayHaveSideEffects = MayWriteToMemory ||
+                         !Attrs.hasAttribute(Attribute::NoUnwind) ||
+                         !Attrs.hasAttribute(Attribute::WillReturn);
+  }
+
+  /// Helper function to produce the widened intrinsic call.
+  CallInst *createVectorCall(VPTransformState &State);
+
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
@@ -1637,19 +1661,8 @@ public:
                          const VPIRFlags &Flags = {},
                          const VPIRMetadata &Metadata = {},
                          DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, Flags,
-                            DL),
-        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
-        ResultTy(Ty) {
-    LLVMContext &Ctx = Ty->getContext();
-    AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
-    MemoryEffects ME = Attrs.getMemoryEffects();
-    MayReadFromMemory = !ME.onlyWritesMemory();
-    MayWriteToMemory = !ME.onlyReadsMemory();
-    MayHaveSideEffects = MayWriteToMemory ||
-                         !Attrs.hasAttribute(Attribute::NoUnwind) ||
-                         !Attrs.hasAttribute(Attribute::WillReturn);
-  }
+      : VPWidenIntrinsicRecipe(VPDef::VPWidenIntrinsicSC, VectorIntrinsicID,
+                               CallArguments, Ty, Flags, Metadata, DL) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
 
@@ -1662,7 +1675,24 @@ public:
                                       *this, *this, getDebugLoc());
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenMemIntrinsicSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
+  }
 
   /// Produce a widened version of the vector intrinsic.
   void execute(VPTransformState &State) override;
@@ -1700,26 +1730,9 @@ protected:
 };
 
 /// A recipe for widening vector memory intrinsics.
-class VPWidenMemIntrinsicRecipe : public VPRecipeBase, public VPIRMetadata {
-  Instruction &Ingredient;
-
+class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
   /// Alignment information for this memory access.
   Align Alignment;
-
-  /// ID of the vector intrinsic to widen.
-  Intrinsic::ID VectorIntrinsicID;
-
-  /// Scalar return type of the intrinsic.
-  Type *ResultTy;
-
-  /// True if the intrinsic may read from memory.
-  bool MayReadFromMemory;
-
-  /// True if the intrinsic may read write to memory.
-  bool MayWriteToMemory;
-
-  /// True if the intrinsic may have side-effects.
-  bool MayHaveSideEffects;
 
 public:
   // TODO: support StoreInst for strided store
@@ -1727,21 +1740,18 @@ public:
                             ArrayRef<VPValue *> CallArguments,
                             const VPIRMetadata &MD = {},
                             DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(VPDef::VPWidenMemIntrinsicSC, CallArguments, DL),
-        VPIRMetadata(MD), Ingredient(LI), Alignment(LI.getAlign()),
-        VectorIntrinsicID(VectorIntrinsicID), ResultTy(LI.getType()),
-        MayReadFromMemory(LI.mayReadFromMemory()),
-        MayWriteToMemory(LI.mayWriteToMemory()),
-        MayHaveSideEffects(LI.mayHaveSideEffects()) {
-    new VPValue(&LI, this);
+      : VPWidenIntrinsicRecipe(VPDef::VPWidenMemIntrinsicSC, VectorIntrinsicID,
+                               CallArguments, LI.getType(), {}, MD, DL),
+        Alignment(LI.getAlign()) {
+    setUnderlyingValue(&LI);
   }
 
   ~VPWidenMemIntrinsicRecipe() override = default;
 
   VPWidenMemIntrinsicRecipe *clone() override {
-    return new VPWidenMemIntrinsicRecipe(*cast<LoadInst>(&Ingredient),
-                                         VectorIntrinsicID, operands(), *this,
-                                         getDebugLoc());
+    return new VPWidenMemIntrinsicRecipe(*cast<LoadInst>(getUnderlyingInstr()),
+                                         getVectorIntrinsicID(), operands(),
+                                         *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenMemIntrinsicSC)
@@ -1753,42 +1763,15 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  /// Return the ID of the intrinsic.
-  Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
-
-  /// Return the scalar return type of the intrinsic.
-  Type *getResultType() const { return ResultTy; }
-
-  /// Return to name of the intrinsic as string.
-  StringRef getIntrinsicName() const {
-    return Intrinsic::getBaseName(VectorIntrinsicID);
-  }
-
-  /// Returns true if the intrinsic may read from memory.
-  bool mayReadFromMemory() const { return MayReadFromMemory; }
-
-  /// Returns true if the intrinsic may write to memory.
-  bool mayWriteToMemory() const { return MayWriteToMemory; }
-
-  /// Returns true if the intrinsic may have side-effects.
-  bool mayHaveSideEffects() const { return MayHaveSideEffects; }
-
+  /// Return the index of pointer parameter.
   unsigned getMemoryPointerParamPos() const;
 
+  /// Return the index of mask parameter.
   unsigned getMaskParamPos() const;
 
   void setMask(VPValue *Mask) { setOperand(getMaskParamPos(), Mask); }
 
   VPValue *getMask() const { return getOperand(getMaskParamPos()); }
-
-  bool usesFirstLaneOnly(const VPValue *Op) const override;
-
-protected:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
-#endif
 };
 
 /// A recipe for widening Call instructions using library calls.
