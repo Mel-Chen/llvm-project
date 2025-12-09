@@ -359,7 +359,6 @@ public:
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
     VPWidenMemIntrinsicSC,
-    VPWidenStridedLoadSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,

@@ -162,8 +162,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           return VerifyEVLUse(*R, R->getNumOperands() - 1);
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
-              VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe,
-              VPWidenStridedLoadRecipe>(
+              VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
         .Case<VPScalarIVStepsRecipe>([&](auto *R) {
           if (R->getNumOperands() != 3) {

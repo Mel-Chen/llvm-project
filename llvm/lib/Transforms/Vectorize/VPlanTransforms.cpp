@@ -2811,14 +2811,6 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         *I, I->getDebugLoc());
   }
 
-  if (auto *StridedL = dyn_cast<VPWidenStridedLoadRecipe>(&CurRecipe))
-    if (StridedL->isMasked() &&
-        match(StridedL->getMask(), m_RemoveMask(HeaderMask, Mask)))
-      return new VPWidenStridedLoadRecipe(
-          *cast<LoadInst>(&StridedL->getIngredient()), StridedL->getAddr(),
-          StridedL->getStride(), &EVL, Mask, *StridedL,
-          StridedL->getDebugLoc());
-
   if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(),
                                       m_RemoveMask(HeaderMask, Mask))) &&
       !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
@@ -2872,17 +2864,14 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  assert(
-      all_of(
-          Plan.getVF().users(),
-          [&LoopRegion](VPUser *U) {
-            auto *R = cast<VPRecipeBase>(U);
-            return (R->getParent()->getParent() != LoopRegion) ||
-                   isa<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                       VPWidenIntOrFpInductionRecipe, VPWidenStridedLoadRecipe>(
-                       R);
-          }) &&
-      "User of VF that we can't transform to EVL.");
+  assert(all_of(Plan.getVF().users(),
+                [&LoopRegion](VPUser *U) {
+                  auto *R = cast<VPRecipeBase>(U);
+                  return (R->getParent()->getParent() != LoopRegion) ||
+                         isa<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                             VPWidenIntOrFpInductionRecipe>(R);
+                }) &&
+         "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
@@ -2980,7 +2969,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
            "original.");
     EVLRecipe->insertBefore(CurRecipe);
     if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPWidenMemIntrinsicRecipe,
-            VPWidenStridedLoadRecipe, VPInterleaveEVLRecipe>(EVLRecipe)) {
+            VPInterleaveEVLRecipe>(EVLRecipe)) {
       for (unsigned I = 0; I < NumDefVal; ++I) {
         VPValue *CurVPV = CurRecipe->getVPValue(I);
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPValue(I));

@@ -4021,7 +4021,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
                 [](const auto *R) { return Instruction::Select; })
             .Case<VPWidenStoreRecipe>(
                 [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe, VPWidenStridedLoadRecipe>(
+            .Case<VPWidenLoadRecipe>(
                 [](const auto *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
@@ -4125,7 +4125,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPReductionPHISC:
       case VPDef::VPInterleaveEVLSC:
       case VPDef::VPInterleaveSC:
-      case VPDef::VPWidenStridedLoadSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
       case VPDef::VPWidenStoreEVLSC:
@@ -7095,7 +7094,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
 
       // The strided load is transformed from a gather through VPlanTransform,
       // and its cost will be lower than the original gather.
-      if (isa<VPWidenStridedLoadRecipe>(&R))
+      if (isa<VPWidenMemIntrinsicRecipe>(&R))
         return true;
 
       if (Instruction *UI = GetInstructionForCost(&R)) {

@@ -573,7 +573,6 @@ public:
     case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
-    case VPRecipeBase::VPWidenStridedLoadSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -3378,8 +3377,7 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenStridedLoadSC;
+           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -3503,57 +3501,6 @@ protected:
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
-};
-
-/// A recipe for strided load operations, using the base address, stride, VF,
-/// and an optional mask. This recipe will generate a vp.strided.load intrinsic
-/// call to represent memory accesses with a fixed stride.
-struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
-                                        public VPValue {
-  VPWidenStridedLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Stride,
-                           VPValue *VF, VPValue *Mask,
-                           const VPIRMetadata &Metadata, DebugLoc DL)
-      : VPWidenMemoryRecipe(
-            VPDef::VPWidenStridedLoadSC, Load, {Addr, Stride, VF},
-            /*Consecutive=*/false, /*Reverse=*/false, Metadata, DL),
-        VPValue(this, &Load) {
-    setMask(Mask);
-  }
-
-  VPWidenStridedLoadRecipe *clone() override {
-    return new VPWidenStridedLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                        getStride(), getVF(), getMask(), *this,
-                                        getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenStridedLoadSC);
-
-  /// Return the stride operand.
-  VPValue *getStride() const { return getOperand(1); }
-
-  /// Return the VF operand.
-  VPValue *getVF() const { return getOperand(2); }
-
-  /// Generate a strided load.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPWidenStridedLoadRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool usesFirstLaneOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // All operands except the mask are only used for the first lane.
-    return Op == getAddr() || Op == getStride() || Op == getVF();
-  }
 };
 
 /// A recipe for widening store operations, using the stored value, the address
