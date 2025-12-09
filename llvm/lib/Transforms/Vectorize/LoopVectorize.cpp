@@ -4047,8 +4047,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
             .Case(
                 [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe, VPWidenStridedLoadRecipe>(
-                [](const auto *R) { return Instruction::Load; })
+            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
@@ -4150,7 +4149,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPReductionPHISC:
       case VPRecipeBase::VPInterleaveEVLSC:
       case VPRecipeBase::VPInterleaveSC:
-      case VPRecipeBase::VPWidenStridedLoadSC:
       case VPRecipeBase::VPWidenLoadEVLSC:
       case VPRecipeBase::VPWidenLoadSC:
       case VPRecipeBase::VPWidenStoreEVLSC:
@@ -7154,7 +7152,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
 
       // The strided load is transformed from a gather through VPlanTransform,
       // and its cost will be lower than the original gather.
-      if (isa<VPWidenStridedLoadRecipe>(&R))
+      if (isa<VPWidenMemIntrinsicRecipe>(&R))
         return true;
 
       if (Instruction *UI = GetInstructionForCost(&R)) {
