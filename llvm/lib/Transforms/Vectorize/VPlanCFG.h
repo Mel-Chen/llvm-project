@@ -113,6 +113,74 @@ public:
   }
 };
 
+/// Similar to VPAllSuccessorsIterator but for predecessors. For VPRegionBlocks,
+/// visits their exiting block instead of direct predecessors.
+template <typename BlockPtrTy>
+class VPAllPredecessorsIterator
+    : public iterator_facade_base<VPAllPredecessorsIterator<BlockPtrTy>,
+                                  std::forward_iterator_tag, VPBlockBase> {
+  BlockPtrTy Block;
+  /// Analogous to SuccessorIdx in VPAllSuccessorsIterator but for the index of
+  /// predecessor.
+  size_t PredecessorIdx;
+
+  /// Returns the nearest block that has predecessors, starting from \p Current.
+  static BlockPtrTy getBlockWithPreds(BlockPtrTy Current) {
+    while (Current && Current->getNumPredecessors() == 0)
+      Current = Current->getParent();
+    return Current;
+  }
+
+  /// Templated helper to dereference predecessor \p PredIdx of \p Block.
+  template <typename T1> static T1 deref(T1 Block, unsigned PredIdx) {
+    if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
+      assert(PredIdx == 0);
+      return R->getExiting();
+    }
+    // For entry blocks, use the predecessors of parent region.
+    BlockPtrTy ParentWithPreds = getBlockWithPreds(Block);
+    assert(ParentWithPreds && "Dereference the end iterator of top entry?");
+    return ParentWithPreds->getPredecessors()[PredIdx];
+  }
+
+  VPAllPredecessorsIterator(BlockPtrTy Block, size_t Idx)
+      : Block(Block), PredecessorIdx(Idx) {}
+
+public:
+  using reference = BlockPtrTy;
+
+  VPAllPredecessorsIterator(BlockPtrTy Block)
+      : VPAllPredecessorsIterator(Block, 0) {}
+
+  static VPAllPredecessorsIterator end(BlockPtrTy Block) {
+    if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
+      // Traverse through the region's exiting node.
+      return {R, 1};
+    }
+    BlockPtrTy ParentWithPreds = getBlockWithPreds(Block);
+    unsigned NumPredecessors =
+        ParentWithPreds ? ParentWithPreds->getNumPredecessors() : 0;
+    return {Block, NumPredecessors};
+  }
+
+  VPAllPredecessorsIterator &operator=(const VPAllPredecessorsIterator &R) {
+    Block = R.Block;
+    PredecessorIdx = R.PredecessorIdx;
+    return *this;
+  }
+
+  bool operator==(const VPAllPredecessorsIterator &R) const {
+    return Block == R.Block && PredecessorIdx == R.PredecessorIdx;
+  }
+
+  reference operator*() const { return deref(Block, PredecessorIdx); }
+
+  VPAllPredecessorsIterator &operator++() {
+    PredecessorIdx++;
+    return *this;
+  }
+};
+
 /// Helper for GraphTraits specialization that traverses through VPRegionBlocks.
 template <typename BlockTy> class VPBlockDeepTraversalWrapper {
   BlockTy Entry;
@@ -290,18 +358,16 @@ template <> struct GraphTraits<const VPBlockBase *> {
 /// predecessors recursively through regions.
 template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   using NodeRef = VPBlockBase *;
-  using ChildIteratorType = SmallVectorImpl<VPBlockBase *>::iterator;
+  using ChildIteratorType = VPAllPredecessorsIterator<VPBlockBase *>;
 
-  static NodeRef getEntryNode(Inverse<NodeRef> B) {
-    llvm_unreachable("not implemented");
-  }
+  static NodeRef getEntryNode(Inverse<NodeRef> B) { return B.Graph; }
 
   static inline ChildIteratorType child_begin(NodeRef N) {
-    llvm_unreachable("not implemented");
+    return ChildIteratorType(N);
   }
 
   static inline ChildIteratorType child_end(NodeRef N) {
-    llvm_unreachable("not implemented");
+    return ChildIteratorType::end(N);
   }
 };
 
