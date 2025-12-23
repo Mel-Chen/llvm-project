@@ -152,6 +152,8 @@ public:
   VPAllPredecessorsIterator(BlockPtrTy Block)
       : VPAllPredecessorsIterator(Block, 0) {}
 
+  VPAllPredecessorsIterator(const VPAllPredecessorsIterator &Other) = default;
+
   static VPAllPredecessorsIterator end(BlockPtrTy Block) {
     if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
       // Traverse through the region's exiting node.
