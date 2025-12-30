@@ -1673,19 +1673,17 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
+      VPSingleDefRecipe *Clone;
       if (auto *CastR = dyn_cast<VPWidenCastRecipe>(RepOrWidenR)) {
-        VPBuilder Builder(CastR);
-        auto *Clone = Builder.createScalarCast(
+        Clone = VPBuilder(CastR).createScalarCast(
             CastR->getOpcode(), CastR->getOperand(0), CastR->getResultType(),
             CastR->getDebugLoc(), *CastR, *CastR);
-        CastR->replaceAllUsesWith(Clone);
-        CastR->eraseFromParent();
-        continue;
+      } else {
+        Clone = new VPReplicateRecipe(
+            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
+        Clone->insertBefore(RepOrWidenR);
       }
-      auto *Clone = new VPReplicateRecipe(
-          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
-      Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
         RepOrWidenR->eraseFromParent();
