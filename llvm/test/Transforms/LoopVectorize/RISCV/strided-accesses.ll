@@ -20,7 +20,7 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[EVL_BASED_IV]], 3
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[EVL_BASED_IV]], 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[P]], <vscale x 4 x i64> [[TMP14]]
@@ -60,7 +60,7 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UF2-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP7]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UF2-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-UF2-NEXT:    [[TMP8:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-UF2-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[INDEX]], 3
 ; CHECK-UF2-NEXT:    [[TMP9:%.*]] = shl nuw nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 3)
 ; CHECK-UF2-NEXT:    [[TMP10:%.*]] = shl nuw nsw <vscale x 4 x i64> [[STEP_ADD]], splat (i64 3)
 ; CHECK-UF2-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP8]]
