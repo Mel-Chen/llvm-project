@@ -2569,10 +2569,6 @@ static void licm(VPlan &Plan) {
       continue;
 
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (isDeadRecipe(R)) {
-        R.eraseFromParent();
-        continue;
-      }
       if (cannotHoistOrSinkRecipe(R) || R.mayHaveSideEffects())
         continue;
 
