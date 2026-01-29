@@ -26,10 +26,12 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT7]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt <vscale x 2 x i32> [[VEC_IND]], splat (i32 2)
+; CHECK-NEXT:    [[TMP14:%.*]] = xor <vscale x 2 x i1> [[TMP12]], splat (i1 true)
+; CHECK-NEXT:    [[TMP15:%.*]] = or <vscale x 2 x i1> [[TMP12]], [[TMP14]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i32> [[TMP8]], <vscale x 2 x i32> [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl <vscale x 2 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP17:%.*]] = trunc <vscale x 2 x i32> [[TMP16]] to <vscale x 2 x i8>
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> [[TMP17]], <vscale x 2 x ptr> align 1 [[BROADCAST_SPLAT4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> [[TMP17]], <vscale x 2 x ptr> align 1 [[BROADCAST_SPLAT4]], <vscale x 2 x i1> [[TMP15]], i32 [[TMP11]])
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP11]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT8]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[AVL_NEXT]], 0

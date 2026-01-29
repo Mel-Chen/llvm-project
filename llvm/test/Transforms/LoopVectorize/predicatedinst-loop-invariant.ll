@@ -21,31 +21,34 @@ define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE8]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i32> [[VEC_IND]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i32> [[VEC_IND]], splat (i32 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP5]], splat (i1 true)
+; CHECK-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i8>
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP19]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i8> [[TMP8]], i32 0
 ; CHECK-NEXT:    store i8 [[TMP17]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP19]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; CHECK:       [[PRED_STORE_IF3]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP8]], i32 1
 ; CHECK-NEXT:    store i8 [[TMP12]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP19]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP8]], i32 2
 ; CHECK-NEXT:    store i8 [[TMP14]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP19]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_IF7]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i8> [[TMP8]], i32 3
@@ -112,12 +115,15 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = add <4 x i32> [[BROADCAST_SPLAT4]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i32> [[VEC_IND]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i8> [[VEC_IND1]], splat (i8 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP5]], splat (i1 true)
+; CHECK-NEXT:    [[TMP17:%.*]] = or <4 x i1> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i8>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP4]], <4 x i8> [[TMP8]], <4 x i8> splat (i8 1)
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP24]], <4 x i8> [[TMP8]], <4 x i8> splat (i8 1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = srem <4 x i8> [[VEC_IND1]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP24]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP11]], i32 0
@@ -125,7 +131,7 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    store i32 4, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP24]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i8> [[TMP11]], i32 1
@@ -133,7 +139,7 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    store i32 4, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP24]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; CHECK:       [[PRED_STORE_IF7]]:
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i8> [[TMP11]], i32 2
@@ -141,7 +147,7 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    store i32 4, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP24]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP22]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10]]
 ; CHECK:       [[PRED_STORE_IF9]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i8> [[TMP11]], i32 3

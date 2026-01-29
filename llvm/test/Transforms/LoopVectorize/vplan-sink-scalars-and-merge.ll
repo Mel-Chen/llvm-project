@@ -349,8 +349,8 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ult ir<%iv>, ir<%j>
-; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.1>
+; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
@@ -371,12 +371,15 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0.0:
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.1>
+; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or ir<%c.1>, vp<[[NOT]]>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[MASK1]]>, vp<[[OR]]>
 ; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/ir<%c.1>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK1]]>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK3]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
@@ -448,8 +451,8 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
-; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ugt ir<%iv>, ir<%j>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.0>
+; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ugt ir<%iv>, ir<%j>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
@@ -470,13 +473,16 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0.0:
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
+; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or ir<%c.0>, vp<[[NOT]]>
 ; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/ir<%c.0>
-; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.1>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[OR]]>, ir<%c.1>
+; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = logical-and vp<[[MASK1]]>, vp<[[MASK3]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK3]]>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK4]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
@@ -576,13 +582,16 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0.0:
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
+; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or ir<%c.0>, vp<[[NOT]]>
 ; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/ir<%c.0>
-; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.0>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[OR]]>, ir<%c.0>
+; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = logical-and vp<[[MASK1]]>, vp<[[MASK3]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK3]]>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK4]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:

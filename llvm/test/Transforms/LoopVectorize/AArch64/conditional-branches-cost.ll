@@ -1083,35 +1083,40 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP12:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; PRED-NEXT:    [[TMP13:%.*]] = or <4 x i1> [[TMP12]], [[BROADCAST_SPLAT]]
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
 ; PRED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
 ; PRED-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], splat (i64 20)
+; PRED-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
 ; PRED-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
 ; PRED-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <4 x i64> [[TMP1]] to <4 x i32>
-; PRED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; PRED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP14]], i32 0
 ; PRED-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; PRED:       [[PRED_STORE_IF]]:
 ; PRED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; PRED-NEXT:    store i32 [[TMP4]], ptr [[DST]], align 4
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; PRED:       [[PRED_STORE_CONTINUE]]:
-; PRED-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
+; PRED-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP14]], i32 1
 ; PRED-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
 ; PRED:       [[PRED_STORE_IF1]]:
 ; PRED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
 ; PRED-NEXT:    store i32 [[TMP6]], ptr [[DST]], align 4
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; PRED:       [[PRED_STORE_CONTINUE2]]:
-; PRED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
+; PRED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP14]], i32 2
 ; PRED-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; PRED:       [[PRED_STORE_IF3]]:
 ; PRED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
 ; PRED-NEXT:    store i32 [[TMP8]], ptr [[DST]], align 4
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; PRED:       [[PRED_STORE_CONTINUE4]]:
-; PRED-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
+; PRED-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP14]], i32 3
 ; PRED-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
 ; PRED:       [[PRED_STORE_IF5]]:
 ; PRED-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
@@ -1291,21 +1296,24 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[TMP13:%.*]] = uitofp <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x float>
 ; PRED-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; PRED-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
-; PRED-NEXT:    [[TMP15:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD5]], zeroinitializer
-; PRED-NEXT:    [[TMP16:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i1> zeroinitializer
+; PRED-NEXT:    [[TMP15:%.*]] = icmp eq <vscale x 16 x i8> [[WIDE_MASKED_LOAD5]], zeroinitializer
+; PRED-NEXT:    [[TMP30:%.*]] = xor <vscale x 16 x i1> [[TMP15]], splat (i1 true)
+; PRED-NEXT:    [[TMP16:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP30]], <vscale x 16 x i1> zeroinitializer
 ; PRED-NEXT:    [[TMP17:%.*]] = xor <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], splat (i8 1)
 ; PRED-NEXT:    [[TMP18:%.*]] = select <vscale x 16 x i1> [[TMP16]], <vscale x 16 x i8> [[BROADCAST_SPLAT]], <vscale x 16 x i8> splat (i8 1)
 ; PRED-NEXT:    [[TMP19:%.*]] = udiv <vscale x 16 x i8> [[TMP17]], [[TMP18]]
 ; PRED-NEXT:    [[TMP20:%.*]] = icmp ugt <vscale x 16 x i8> [[TMP19]], splat (i8 1)
 ; PRED-NEXT:    [[TMP21:%.*]] = select <vscale x 16 x i1> [[TMP20]], <vscale x 16 x i32> zeroinitializer, <vscale x 16 x i32> splat (i32 255)
-; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i32> [[TMP21]], <vscale x 16 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP31:%.*]] = or <vscale x 16 x i1> [[TMP30]], [[TMP15]]
+; PRED-NEXT:    [[TMP32:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP31]], <vscale x 16 x i1> zeroinitializer
+; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i32> zeroinitializer, <vscale x 16 x i32> [[TMP21]]
 ; PRED-NEXT:    [[TMP22:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x i32>
 ; PRED-NEXT:    [[TMP23:%.*]] = sub <vscale x 16 x i32> [[PREDPHI]], [[TMP22]]
 ; PRED-NEXT:    [[TMP24:%.*]] = sitofp <vscale x 16 x i32> [[TMP23]] to <vscale x 16 x float>
 ; PRED-NEXT:    [[TMP25:%.*]] = call <vscale x 16 x float> @llvm.fmuladd.nxv16f32(<vscale x 16 x float> [[TMP24]], <vscale x 16 x float> splat (float 3.000000e+00), <vscale x 16 x float> [[TMP13]])
 ; PRED-NEXT:    [[TMP26:%.*]] = fptoui <vscale x 16 x float> [[TMP25]] to <vscale x 16 x i8>
 ; PRED-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[C]], i64 [[INDEX]]
-; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP26]], ptr align 1 [[TMP27]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
+; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP26]], ptr align 1 [[TMP27]], <vscale x 16 x i1> [[TMP32]])
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP11]])
 ; PRED-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
