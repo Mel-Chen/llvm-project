@@ -1298,6 +1298,13 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
 
+  // !x | x -> -1
+  if (match(Def, m_c_BinaryOr(m_Not(m_VPValue(X)), m_Deferred(X)))) {
+    Type *Ty = TypeInfo.inferScalarType(X);
+    return Def->replaceAllUsesWith(
+        Plan->getConstantInt(APInt::getAllOnes(Ty->getScalarSizeInBits())));
+  }
+
   // x && !x -> 0
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
     return Def->replaceAllUsesWith(Plan->getFalse());
