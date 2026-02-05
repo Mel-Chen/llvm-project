@@ -150,9 +150,6 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
 
-  // TODO: Skip creating edge masks for blocks that are control-flow equivalent
-  // to header and have no phis.
-  createIncomingEdgeMasks(VPBB);
 
   // Reuse the mask of header block if VPBB is control-flow equivalent to
   // header.
@@ -161,10 +158,13 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
       VPBB->getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
   if (VPPDT.properlyDominates(VPBB, Header)) {
     BlockMask = getBlockInMask(Header);
+    if (!VPBB->phis().empty())
+      createIncomingEdgeMasks(VPBB);
     setBlockInMask(VPBB, BlockMask);
     return BlockMask;
   }
 
+  createIncomingEdgeMasks(VPBB);
   // This is the block mask. We OR all unique incoming edges.
   for (auto *Predecessor : SetVector<VPBlockBase *>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
