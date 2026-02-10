@@ -20,6 +20,10 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMIN21]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[X_I64]], 3
+; CHECK-NEXT:    [[SCEVGEP11:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP6]], -8
+; CHECK-NEXT:    [[SCEVGEP17:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = shl nsw i64 [[X_I64]], 1
