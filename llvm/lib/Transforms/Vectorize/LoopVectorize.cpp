@@ -8390,8 +8390,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
-  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, CostCtx,
-                 Range);
+  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
+                 *OrigLoop, CostCtx, Range);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
