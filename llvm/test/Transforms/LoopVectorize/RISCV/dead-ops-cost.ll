@@ -18,8 +18,6 @@ define void @dead_load(ptr %p, i16 %start) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMIN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[START_EXT]], 1
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
