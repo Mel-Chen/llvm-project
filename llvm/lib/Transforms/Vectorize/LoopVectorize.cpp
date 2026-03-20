@@ -7226,10 +7226,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
           return true;
       }
 
-      // vp.reverse is generated during EVL tail folding transformation.
-      if (match(&R, m_Intrinsic<Intrinsic::experimental_vp_reverse>()))
-        return true;
-
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
