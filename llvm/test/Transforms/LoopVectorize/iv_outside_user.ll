@@ -631,71 +631,37 @@ for.end:
 }
 
 define i32 @postinc_not_iv_backedge_value(i32 %k)  {
-; VEC-LABEL: define i32 @postinc_not_iv_backedge_value(
-; VEC-SAME: i32 [[K:%.*]]) {
-; VEC-NEXT:  [[ENTRY:.*]]:
-; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
-; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[K]], 2
-; VEC-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
-; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VEC:       [[VECTOR_BODY]]:
-; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; VEC-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i32> [[VEC_IND]], splat (i32 2)
-; VEC-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; VEC-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
-; VEC:       [[MIDDLE_BLOCK]]:
-; VEC-NEXT:    [[TMP0:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
-; VEC-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
-; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
-; VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
-; VEC:       [[SCALAR_PH]]:
-; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VEC-NEXT:    br label %[[FOR_BODY:.*]]
-; VEC:       [[FOR_BODY]]:
-; VEC-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; VEC-NEXT:    [[INC]] = add nsw i32 [[INC_PHI]], 1
-; VEC-NEXT:    [[INC_2:%.*]] = add i32 [[INC_PHI]], 2
-; VEC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], [[K]]
-; VEC-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
-; VEC:       [[FOR_END]]:
-; VEC-NEXT:    [[INC_2_LCSSA:%.*]] = phi i32 [ [[INC_2]], %[[FOR_BODY]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
-; VEC-NEXT:    ret i32 [[INC_2_LCSSA]]
-;
-; INTERLEAVE-LABEL: define i32 @postinc_not_iv_backedge_value(
-; INTERLEAVE-SAME: i32 [[K:%.*]]) {
-; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
-; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
-; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[K]], 2
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
-; INTERLEAVE:       [[VECTOR_BODY]]:
-; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; INTERLEAVE-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
-; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 1
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 2
-; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
-; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
-; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; INTERLEAVE-NEXT:    br label %[[FOR_BODY:.*]]
-; INTERLEAVE:       [[FOR_BODY]]:
-; INTERLEAVE-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[INC]] = add nsw i32 [[INC_PHI]], 1
-; INTERLEAVE-NEXT:    [[INC_2:%.*]] = add i32 [[INC_PHI]], 2
-; INTERLEAVE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], [[K]]
-; INTERLEAVE-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
-; INTERLEAVE:       [[FOR_END]]:
-; INTERLEAVE-NEXT:    [[INC_2_LCSSA:%.*]] = phi i32 [ [[INC_2]], %[[FOR_BODY]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
-; INTERLEAVE-NEXT:    ret i32 [[INC_2_LCSSA]]
+; CHECK-LABEL: define i32 @postinc_not_iv_backedge_value(
+; CHECK-SAME: i32 [[K:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[K]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[N_VEC]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 2, [[TMP1]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[INC_PHI]], 1
+; CHECK-NEXT:    [[INC_2:%.*]] = add i32 [[INC_PHI]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], [[K]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[FOR_END]]:
+; CHECK-NEXT:    [[INC_2_LCSSA:%.*]] = phi i32 [ [[INC_2]], %[[FOR_BODY]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[INC_2_LCSSA]]
 ;
 entry:
   br label %for.body
