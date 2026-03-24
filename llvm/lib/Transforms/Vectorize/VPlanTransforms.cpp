@@ -1084,14 +1084,12 @@ static VPValue *optimizeLatchExitInductionUser(
   if (!WideIV)
     return nullptr;
 
+  // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
+  // changed it means the exit is using the incremented value.
+  assert(Incoming == WideIV &&
+         "Users of the incremented IV have been replaced by ExitingIVValue.");
   VPValue *EndValue = EndValues.lookup(WideIV);
   assert(EndValue && "Must have computed the end value up front");
-
-  // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
-  // changed it means the exit is using the incremented value, so we don't
-  // need to subtract the step.
-  if (Incoming != WideIV)
-    return EndValue;
 
   // Otherwise, subtract the step from the EndValue.
   VPBuilder B(cast<VPBasicBlock>(PredVPBB)->getTerminator());
