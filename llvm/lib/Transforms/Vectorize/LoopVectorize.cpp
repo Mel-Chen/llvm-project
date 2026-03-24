@@ -7225,7 +7225,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                 RepR->getUnderlyingInstr(), VF))
           return true;
       }
-
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
