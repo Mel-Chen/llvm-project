@@ -1599,6 +1599,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
           BuildVector->getOperand(BuildVector->getNumOperands() - 1));
       return;
     }
+    // Simplify ExtractLastLane(ExtractLastPart(ExitingIVValue(WideIV))) to
+    // ExitingIVValue(WideIV).
+    if (match(A, m_ExtractLastPart(m_ExitingIVValue(m_VPValue())))) {
+      // Get the ExitingIVValue recipe
+      auto *ExtractLastPart = cast<VPInstruction>(A);
+      VPValue *ExitingIV = ExtractLastPart->getOperand(0);
+      Def->replaceAllUsesWith(ExitingIV);
+      return;
+    }
     if (Plan->hasScalarVFOnly())
       return Def->replaceAllUsesWith(A);
   }

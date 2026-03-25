@@ -8081,11 +8081,21 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
+  // DEBUG: Print VPlan before createHeaderPhiRecipes
+  //llvm::dbgs() << "=== VPlan BEFORE createHeaderPhiRecipes ===\n";
+  //VPlan0->print(llvm::dbgs());
+  //llvm::dbgs() << "=== END VPlan BEFORE createHeaderPhiRecipes ===\n\n";
+
   // Create recipes for header phis.
   VPlanTransforms::createHeaderPhiRecipes(
       *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
       Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
       CM.getInLoopReductions(), Hints.allowReordering());
+
+  // DEBUG: Print VPlan after createHeaderPhiRecipes
+  //llvm::dbgs() << "=== VPlan AFTER createHeaderPhiRecipes ===\n";
+  //VPlan0->print(llvm::dbgs());
+  //llvm::dbgs() << "=== END VPlan AFTER createHeaderPhiRecipes ===\n\n";
 
   VPlanTransforms::simplifyRecipes(*VPlan0);
   // If we're vectorizing a loop with an uncountable exit, make sure that the
