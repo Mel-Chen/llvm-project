@@ -1105,27 +1105,19 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
   VPBuilder VectorPHBuilder(VectorPH, VectorPH->begin());
   DenseMap<VPValue *, VPValue *> EndValues;
-  VPValue *ResumeTC =
-      FoldTail ? Plan.getTripCount() : &Plan.getVectorTripCount();
-  for (auto &Phi : VectorRegion->getEntryBasicBlock()->phis()) {
-    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&Phi);
-    if (!WideIV)
-      continue;
-    if (VPValue *EndValue = tryToComputeEndValueForInduction(
-            WideIV, VectorPHBuilder, TypeInfo, ResumeTC))
-      EndValues[WideIV] = EndValue;
-  }
 
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   for (VPRecipeBase &R : make_early_inc_range(*MiddleVPBB)) {
-    VPValue *Op;
-    if (!match(&R, m_ExitingIVValue(m_VPValue(Op))))
+    VPValue *Op, *ResumeTC;
+    if (!match(&R, m_ExitingIVValue(m_VPValue(Op), m_VPValue(ResumeTC))))
       continue;
     auto *WideIV = cast<VPWidenInductionRecipe>(Op);
-    if (VPValue *EndValue = EndValues.lookup(WideIV)) {
-      R.getVPSingleValue()->replaceAllUsesWith(EndValue);
-      R.eraseFromParent();
-    }
+    VPValue *EndValue = tryToComputeEndValueForInduction(
+        WideIV, VectorPHBuilder, TypeInfo, ResumeTC);
+    assert(EndValue);
+    EndValues[WideIV] = EndValue;
+    R.getVPSingleValue()->replaceAllUsesWith(EndValue);
+    R.eraseFromParent();
   }
 
   // Then, optimize exit block users.

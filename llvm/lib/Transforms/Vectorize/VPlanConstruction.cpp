@@ -645,10 +645,17 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
 
   VPValue *BackedgeVal = PhiR->getOperand(1);
+  VPValue *VectorTC = &Plan.getVectorTripCount();
+  VPBasicBlock *LatchVPBB =
+      cast<VPBasicBlock>(PhiR->getParent()->getPredecessors()[1]);
+  VPBasicBlock *MiddleVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[0]);
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
   auto ReplaceExtractsWithExitingIVValue = [&](VPHeaderPHIRecipe *WideIV) {
+    VPBuilder Builder(MiddleVPBB, MiddleVPBB->begin());
+    VPValue *ExitingVal =
+        Builder.createNaryOp(VPInstruction::ExitingIVValue, {WideIV, VectorTC});
     for (VPUser *U : to_vector(BackedgeVal->users())) {
       if (!match(U, m_ExtractLastPart(m_VPValue())))
         continue;
@@ -661,9 +668,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       assert(is_contained(ExtractLastLane->getParent()->successors(),
                           Plan.getScalarPreheader()) &&
              "last lane must be extracted in the middle block");
-      VPBuilder Builder(ExtractLastLane);
-      ExtractLastLane->replaceAllUsesWith(
-          Builder.createNaryOp(VPInstruction::ExitingIVValue, {WideIV}));
+      ExtractLastLane->replaceAllUsesWith(ExitingVal);
       ExtractLastLane->eraseFromParent();
       ExtractLastPart->eraseFromParent();
     }
@@ -1155,6 +1160,10 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   // last active iteration).
   Builder.setInsertPoint(Plan.getMiddleBlock()->getTerminator());
   for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
+    if (match(&R, m_ExitingIVValue(m_VPValue(),
+                                   m_Specific(&Plan.getVectorTripCount()))))
+      R.setOperand(1, Plan.getTripCount());
+
     VPValue *Op;
     if (!match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op))))
       continue;

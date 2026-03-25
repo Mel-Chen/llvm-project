@@ -454,7 +454,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Load:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
-  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
@@ -471,6 +470,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
@@ -1420,9 +1420,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::WidePtrAdd:
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ComputeAnyOfResult:
     return Op == getOperand(0) || Op == getOperand(1);
-  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
   };
