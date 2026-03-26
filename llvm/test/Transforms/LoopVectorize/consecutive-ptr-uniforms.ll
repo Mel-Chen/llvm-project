@@ -1294,10 +1294,10 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP10]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1320,7 +1320,7 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
@@ -1360,10 +1360,10 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; INTER:       [[VECTOR_PH]]:
 ; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX2]], 4
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX2]], [[N_MOD_VF]]
-; INTER-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], 4
-; INTER-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; INTER-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
 ; INTER-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP4]]
+; INTER-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], 4
+; INTER-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP10]]
 ; INTER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTER:       [[VECTOR_BODY]]:
 ; INTER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1386,7 +1386,7 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; INTER-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; INTER:       [[SCALAR_PH]]:
 ; INTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; INTER-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
+; INTER-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
 ; INTER-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
 ; INTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; INTER-NEXT:    br label %[[FOR_BODY:.*]]

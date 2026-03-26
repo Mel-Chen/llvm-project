@@ -581,9 +581,9 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP11]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 257, [[TMP5]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 257, [[N_MOD_VF]]
+; DEFAULT-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 2
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[N_VEC]], 8
 ; DEFAULT-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
-; DEFAULT-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 2
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

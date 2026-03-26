@@ -364,8 +364,8 @@ define void @test_start_zext(i32 %start, ptr %dst) {
 ; IC2:       [[VECTOR_PH]]:
 ; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[START_EXT]], [[N_VEC]]
 ; IC2-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[START_EXT]]
+; IC2-NEXT:    [[TMP8:%.*]] = add i64 [[START_EXT]], [[N_VEC]]
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -383,7 +383,7 @@ define void @test_start_zext(i32 %start, ptr %dst) {
 ; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; IC2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC2:       [[SCALAR_PH]]:
-; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[START_EXT]], %[[ENTRY]] ]
+; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[START_EXT]], %[[ENTRY]] ]
 ; IC2-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IC2-NEXT:    br label %[[LOOP:.*]]
 ; IC2:       [[LOOP]]:

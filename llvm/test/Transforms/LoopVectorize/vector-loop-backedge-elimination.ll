@@ -17,8 +17,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF1:       [[VECTOR_PH]]:
 ; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[AND]], 8
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[AND]], [[N_MOD_VF]]
-; VF8UF1-NEXT:    [[TMP0:%.*]] = sub i64 [[AND]], [[N_VEC]]
 ; VF8UF1-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
+; VF8UF1-NEXT:    [[TMP3:%.*]] = sub i64 [[AND]], [[N_VEC]]
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -33,7 +33,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[AND]], [[N_VEC]]
 ; VF8UF1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VF8UF1:       [[SCALAR_PH]]:
-; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ [[AND]], %[[ENTRY]] ]
+; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[AND]], %[[ENTRY]] ]
 ; VF8UF1-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:

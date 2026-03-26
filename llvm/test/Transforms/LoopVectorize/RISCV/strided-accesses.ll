@@ -1194,9 +1194,9 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-UF2-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; STRIDED-UF2-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT7]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; STRIDED-UF2-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], [[STRIDE]]
-; STRIDED-UF2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP10]]
+; STRIDED-UF2-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP10]]
 ; STRIDED-UF2-NEXT:    [[TMP12:%.*]] = mul i64 [[N_VEC]], [[STRIDE]]
-; STRIDED-UF2-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP12]]
+; STRIDED-UF2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP12]]
 ; STRIDED-UF2-NEXT:    [[TMP14:%.*]] = mul <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT8]]
 ; STRIDED-UF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED-UF2:       vector.body:

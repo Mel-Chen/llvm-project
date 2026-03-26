@@ -39,9 +39,9 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[TMP13]]
+; CHECK-NEXT:    [[IND_END8:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END8:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[TMP14]]
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[TMP14]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -125,9 +125,9 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[TMP9]]
+; CHECK-NEXT:    [[IND_END6:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END6:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[TMP10]]
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[TMP10]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

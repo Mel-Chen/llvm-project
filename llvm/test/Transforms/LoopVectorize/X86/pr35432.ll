@@ -58,9 +58,9 @@ define i32 @main(ptr %ptr) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP4]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP4]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[DOTPROMOTED]], [[N_VEC]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[IND_END2:%.*]] = sub i8 [[CONV3]], [[DOTCAST]]
+; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[DOTPROMOTED]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

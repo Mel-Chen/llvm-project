@@ -1408,9 +1408,9 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP46]], 8
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP46]], [[N_MOD_VF]]
+; UNROLL-NO-IC-NEXT:    [[TMP49:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NO-IC-NEXT:    [[TMP47:%.*]] = mul i64 [[N_VEC]], 200
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP47]]
-; UNROLL-NO-IC-NEXT:    [[TMP49:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x double> poison, double [[J:%.*]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
@@ -1512,9 +1512,9 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; UNROLL-NO-VF:       vector.ph:
 ; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP16]], 2
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP16]], [[N_MOD_VF]]
+; UNROLL-NO-VF-NEXT:    [[TMP18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP17:%.*]] = mul i64 [[N_VEC]], 200
 ; UNROLL-NO-VF-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP17]]
-; UNROLL-NO-VF-NEXT:    [[TMP18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NO-VF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-VF:       vector.body:
 ; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1580,9 +1580,9 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; SINK-AFTER:       vector.ph:
 ; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP25]], 4
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP25]], [[N_MOD_VF]]
+; SINK-AFTER-NEXT:    [[TMP28:%.*]] = trunc i64 [[N_VEC]] to i32
 ; SINK-AFTER-NEXT:    [[TMP26:%.*]] = mul i64 [[N_VEC]], 200
 ; SINK-AFTER-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP26]]
-; SINK-AFTER-NEXT:    [[TMP28:%.*]] = trunc i64 [[N_VEC]] to i32
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x double> poison, double [[J:%.*]], i32 3
 ; SINK-AFTER-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SINK-AFTER:       vector.body:

@@ -20,9 +20,9 @@ define i32 @foo(ptr addrspace(1) %p) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 1, [[N_VEC]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 6, [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 1, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -43,7 +43,7 @@ define i32 @foo(ptr addrspace(1) %p) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ 0, %[[OUTER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ 1, %[[OUTER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ 1, %[[OUTER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 6, %[[OUTER]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:

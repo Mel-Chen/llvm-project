@@ -41,9 +41,9 @@ define void @scalablevf(ptr %dst.start, i8 %a, i8 %b) {
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP2]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 4
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 4
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST_START]], i64 [[TMP5]]
+; SCALABLE-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 4
 ; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[B]], i64 0
 ; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[A]], i64 0

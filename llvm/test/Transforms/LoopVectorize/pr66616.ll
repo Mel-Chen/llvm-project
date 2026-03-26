@@ -28,9 +28,9 @@ define void @pr66616(ptr %ptr) {
 ; CHECK:       vector.ph1:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP6]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP3]], [[DOTCAST]]
-; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY3:%.*]]
 ; CHECK:       vector.body2:
 ; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ 0, [[VECTOR_PH2]] ], [ [[INDEX_NEXT9:%.*]], [[VECTOR_BODY3]] ]

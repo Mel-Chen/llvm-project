@@ -39,8 +39,8 @@ define void @basic_loop(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SIZE]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SIZE]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

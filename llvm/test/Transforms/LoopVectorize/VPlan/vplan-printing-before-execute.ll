@@ -18,8 +18,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; OPTIMIZE-NEXT:  Successor(s): scalar.ph, vector.ph
 ; OPTIMIZE-EMPTY:
 ; OPTIMIZE-NEXT:  vector.ph:
-; OPTIMIZE-NEXT:    vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<16> + vp<[[VP2]]> * ir<-1>
-; OPTIMIZE-NEXT:    vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<%A> + vp<[[VP2]]> * ir<1>
+; OPTIMIZE-NEXT:    vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<%A> + vp<[[VP2]]> * ir<1>
+; OPTIMIZE-NEXT:    vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<16> + vp<[[VP2]]> * ir<-1>
 ; OPTIMIZE-NEXT:  Successor(s): vector loop
 ; OPTIMIZE-EMPTY:
 ; OPTIMIZE-NEXT:  <x1> vector loop: {
@@ -47,8 +47,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; OPTIMIZE-NEXT:  No successors
 ; OPTIMIZE-EMPTY:
 ; OPTIMIZE-NEXT:  scalar.ph:
-; OPTIMIZE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<16>, ir-bb<entry> ]
-; OPTIMIZE-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP4]]>, middle.block ], [ ir<%A>, ir-bb<entry> ]
+; OPTIMIZE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP4]]>, middle.block ], [ ir<16>, ir-bb<entry> ]
+; OPTIMIZE-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP3]]>, middle.block ], [ ir<%A>, ir-bb<entry> ]
 ; OPTIMIZE-NEXT:  Successor(s): ir-bb<loop>
 ; OPTIMIZE-EMPTY:
 ; OPTIMIZE-NEXT:  ir-bb<loop>:

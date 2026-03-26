@@ -30,8 +30,8 @@ define void @interleave_groups_separated_by_offset(ptr %A, i64 %offset) {
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[A]], i64 1984
 ; CHECK-NEXT:    [[IND_END17:%.*]] = getelementptr i8, ptr [[A_OFFSET]], i64 1984
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 1984
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -50,8 +50,8 @@ define void @interleave_groups_separated_by_offset(ptr %A, i64 %offset) {
 ; CHECK-NEXT:    br i1 true, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 992, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 1984
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A_OFFSET]], i64 1984
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i64 1984
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]

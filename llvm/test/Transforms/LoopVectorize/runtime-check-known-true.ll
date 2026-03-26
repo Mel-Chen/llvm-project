@@ -28,10 +28,10 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], -8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], -8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], -8
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP13]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -52,7 +52,7 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[START_1]], %[[ENTRY]] ], [ [[START_1]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ [[START_1]], %[[ENTRY]] ], [ [[START_1]], %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[START_2_DIFF]], %[[ENTRY]] ], [ [[START_2_DIFF]], %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:

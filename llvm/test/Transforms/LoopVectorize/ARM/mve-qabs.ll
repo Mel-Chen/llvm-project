@@ -19,9 +19,9 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -16
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[N_VEC]]
-; CHECK-NEXT:    [[IND_END3:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END3:%.*]] = and i32 [[BLOCKSIZE]], 15
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -111,10 +111,10 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N_VEC]], 1
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP1]]
+; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[IND_END3:%.*]] = and i32 [[BLOCKSIZE]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[N_VEC]], 1
-; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP2]]
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -206,10 +206,10 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP1]]
+; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[IND_END3:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP2]]
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

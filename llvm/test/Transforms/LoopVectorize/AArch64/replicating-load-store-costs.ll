@@ -277,10 +277,10 @@ define ptr @replicating_store_in_conditional_latch(ptr %p, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[DOTCAST]], -2
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 48
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP7]]
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[DOTCAST]], -2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -452,10 +452,10 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP6]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[GEP_START]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP23:%.*]] = mul i64 [[N_VEC]], 3
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[GEP_START]], i64 [[TMP23]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

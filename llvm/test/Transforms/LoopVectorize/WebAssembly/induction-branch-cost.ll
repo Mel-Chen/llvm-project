@@ -18,10 +18,10 @@ define void @induction_phi_and_branch_cost(ptr %end, ptr %start.1, ptr %start.2)
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[N_VEC]], -4
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[N_VEC]], -4
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, ptr [[START_2]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[N_VEC]], -4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[START_1]], i32 [[TMP5]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -36,7 +36,7 @@ define void @induction_phi_and_branch_cost(ptr %end, ptr %start.1, ptr %start.2)
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START_1]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ [[START_1]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[START_2]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:

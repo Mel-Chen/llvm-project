@@ -18,8 +18,8 @@ define void @outside_user_blocks_tail_folding(ptr nocapture readonly %ptr, i32 %
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SIZE]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SIZE]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

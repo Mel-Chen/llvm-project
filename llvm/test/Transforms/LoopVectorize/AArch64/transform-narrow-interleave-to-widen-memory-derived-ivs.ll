@@ -156,10 +156,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 1
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; VF2-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
-; VF2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
 ; VF2-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], 16
 ; VF2-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; VF2-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 16
+; VF2-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP13]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -205,10 +205,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; VF2IC2-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
-; VF2IC2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
 ; VF2IC2-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], 16
 ; VF2IC2-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; VF2IC2-NEXT:    [[TMP16:%.*]] = mul i64 [[N_VEC]], 16
+; VF2IC2-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP16]]
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -260,10 +260,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; VF4-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
-; VF4-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
 ; VF4-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], 16
 ; VF4-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; VF4-NEXT:    [[TMP15:%.*]] = mul i64 [[N_VEC]], 16
+; VF4-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP15]]
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
