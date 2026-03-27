@@ -1249,7 +1249,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::Reverse: {
     assert(VF.isVector() && "Reverse operation must be vector type");
-    Type *EltTy = Ctx.Types.inferScalarType(getOperand(0));
+    Type *EltTy = Ctx.Types.inferScalarType(this);
     // Skip the reverse operation cost for the mask.
     // FIXME: Remove this once redundant mask reverse operations can be
     // eliminated by VPlanTransforms::cse before cost computation.
