@@ -3058,6 +3058,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
   auto GetVPReverse = [&CurRecipe, &EVL, &TypeInfo, Plan,
                        DL](VPValue *V) -> VPWidenIntrinsicRecipe * {
+    if (!V)
+      return nullptr;
     auto *Reverse = new VPWidenIntrinsicRecipe(
         Intrinsic::experimental_vp_reverse, {V, Plan->getTrue(), &EVL},
         TypeInfo.inferScalarType(V), {}, {}, DL);
@@ -3076,8 +3078,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_MaskedLoad(m_VPValue(EndPtr),
                          m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
-    if (Mask)
-      Mask = GetVPReverse(Mask);
+    Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
     auto *LoadR = new VPWidenLoadEVLRecipe(
         *cast<VPWidenLoadRecipe>(ReversedVal), Addr, EVL, Mask);
@@ -3097,8 +3098,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
                           m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
-    if (Mask)
-      Mask = GetVPReverse(Mask);
+    Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
     StoredVal = GetVPReverse(ReversedVal);
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
