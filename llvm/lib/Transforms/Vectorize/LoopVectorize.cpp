@@ -7138,7 +7138,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   };
 
   for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
-    using namespace VPlanPatternMatch;
     // Reverse operations for reverse memory accesses may be hoisted to the
     // preheader by LICM if the reversed value is loop invariant. In this case,
     // the VPlan-based cost model diverges from the legacy cost model.
@@ -7180,7 +7179,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         }
         continue;
       }
-      using namespace VPlanPatternMatch;
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
