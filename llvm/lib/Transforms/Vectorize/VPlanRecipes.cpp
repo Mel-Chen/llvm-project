@@ -3817,20 +3817,19 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // TODO: Using the original IR may not be accurate.
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
-#ifndef NDEBUG
-    auto IsReverse = [this]() {
-      // Check if mask is reversed
+    [[maybe_unused]] auto IsReverse = [this]() {
+      // Check if mask is reversed.
       if (VPValue *Mask = getMask())
         if (match(Mask, m_Reverse(m_VPValue())))
           return true;
 
-      // For loads, check if the single user is a reverse operation
+      // For loads, check if the single user is a reverse operation.
       if (isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)) {
         auto *U = getVPSingleValue()->getSingleUser();
         return U && match(cast<VPRecipeBase>(U), m_Reverse(m_VPValue()));
       }
 
-      // For stores, check if the stored value is reversed
+      // For stores, check if the stored value is reversed.
       VPValue *StoredVal =
           isa<VPWidenStoreRecipe>(this)
               ? cast<VPWidenStoreRecipe>(this)->getStoredValue()
@@ -3839,7 +3838,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     };
     assert(!IsReverse() &&
            "Inconsecutive memory access should not have reverse order");
-#endif
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     Type *PtrTy = Ptr->getType();
 
