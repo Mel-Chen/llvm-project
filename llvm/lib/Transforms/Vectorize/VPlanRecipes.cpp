@@ -1046,8 +1046,11 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         return dyn_cast<VPRecipeBase>(*R->user_begin());
       };
       if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
-        if (match(Recipe, m_Reverse(m_VPValue()))) {
-          Recipe = GetOnlyUser(cast<VPInstruction>(Recipe));
+        if (match(Recipe,
+                  m_CombineOr(m_Reverse(m_VPValue()),
+                              m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                                  m_VPValue(), m_VPValue(), m_VPValue())))) {
+          Recipe = GetOnlyUser(cast<VPSingleDefRecipe>(Recipe));
           IsReverse = true;
         }
         if (Recipe)
@@ -1059,7 +1062,11 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
              Opcode == Instruction::FPExt) {
       if (auto *Recipe = Operand->getDefiningRecipe()) {
         VPValue *ReverseOp;
-        if (match(Recipe, m_Reverse(m_VPValue(ReverseOp)))) {
+        if (match(Recipe,
+                  m_CombineOr(
+                      m_Reverse(m_VPValue(ReverseOp)),
+                      m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                          m_VPValue(ReverseOp), m_VPValue(), m_VPValue())))) {
           Recipe = ReverseOp->getDefiningRecipe();
           IsReverse = true;
         }
@@ -3821,26 +3828,18 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // TODO: Using the original IR may not be accurate.
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
-    [[maybe_unused]] auto IsReverse = [this]() {
-      // Check if mask is reversed.
-      if (VPValue *Mask = getMask())
-        if (match(Mask, m_Reverse(m_VPValue())))
-          return true;
+    [[maybe_unused]] auto IsReverseMask = [this]() {
+      VPValue *Mask = getMask();
+      if (!Mask)
+        return false;
 
-      // For loads, check if the single user is a reverse operation.
-      if (isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)) {
-        auto *U = getVPSingleValue()->getSingleUser();
-        return U && match(cast<VPRecipeBase>(U), m_Reverse(m_VPValue()));
-      }
+      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(this))
+        return match(Mask, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                               m_VPValue(), m_VPValue(), m_VPValue()));
 
-      // For stores, check if the stored value is reversed.
-      VPValue *StoredVal =
-          isa<VPWidenStoreRecipe>(this)
-              ? cast<VPWidenStoreRecipe>(this)->getStoredValue()
-              : cast<VPWidenStoreEVLRecipe>(this)->getStoredValue();
-      return match(StoredVal, m_Reverse(m_VPValue()));
+      return match(Mask, m_Reverse(m_VPValue()));
     };
-    assert(!IsReverse() &&
+    assert(!IsReverseMask() &&
            "Inconsecutive memory access should not have reverse order");
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     Type *PtrTy = Ptr->getType();
