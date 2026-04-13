@@ -1047,9 +1047,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
       };
       if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
         if (match(Recipe,
-                  m_CombineOr(m_Reverse(m_VPValue()),
-                              m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                                  m_VPValue(), m_VPValue(), m_VPValue())))) {
+                  m_CombineOr(
+                      m_Reverse(m_VPValue()),
+                      m_Intrinsic<Intrinsic::experimental_vp_reverse>()))) {
           Recipe = GetOnlyUser(cast<VPSingleDefRecipe>(Recipe));
           IsReverse = true;
         }
@@ -1063,10 +1063,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
       if (auto *Recipe = Operand->getDefiningRecipe()) {
         VPValue *ReverseOp;
         if (match(Recipe,
-                  m_CombineOr(
-                      m_Reverse(m_VPValue(ReverseOp)),
-                      m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                          m_VPValue(ReverseOp), m_VPValue(), m_VPValue())))) {
+                  m_CombineOr(m_Reverse(m_VPValue(ReverseOp)),
+                              m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                                  m_VPValue(ReverseOp))))) {
           Recipe = ReverseOp->getDefiningRecipe();
           IsReverse = true;
         }
@@ -3834,8 +3833,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
         return false;
 
       if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(this))
-        return match(Mask, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                               m_VPValue(), m_VPValue(), m_VPValue()));
+        return match(Mask, m_Intrinsic<Intrinsic::experimental_vp_reverse>());
 
       return match(Mask, m_Reverse(m_VPValue()));
     };
