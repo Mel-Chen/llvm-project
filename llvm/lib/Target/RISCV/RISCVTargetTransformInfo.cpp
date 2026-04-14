@@ -1143,6 +1143,34 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     return InstructionCost::getInvalid();
 
   auto *FVTy = cast<FixedVectorType>(VecTy);
+  // When gaps are only at the tail, for interleaved load, we can emit a wide
+  // masked load and shufflevectors. For interleaved store, we can emit
+  // shufflevectors and a wide masked store. The interleaved memory access pass
+  // will lower them into vlsseg/vssseg intrinsics.
+  if (UseMaskForGaps) {
+    unsigned NumOfFields = Indices.size();
+    bool IsTailGapOnly = NumOfFields > 1 && (NumOfFields == Indices.back() + 1);
+    if (IsTailGapOnly &&
+        NumOfFields <= TLI->getMaxSupportedInterleaveFactor()) {
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(FVTy);
+      if (LT.second.isVector() &&
+          FVTy->getElementCount().isKnownMultipleOf(Factor)) {
+        auto *SubVecTy = VectorType::get(
+            FVTy->getElementType(),
+            FVTy->getElementCount().divideCoefficientBy(Factor));
+        if (TLI->isLegalInterleavedAccessType(SubVecTy, NumOfFields, Alignment,
+                                              AddressSpace, DL)) {
+          // The cost is proportional to the total number of element accesses.
+          InstructionCost MemOpCost =
+              getMemoryOpCost(Opcode, FVTy->getElementType(), Alignment, 0,
+                              CostKind, {TTI::OK_AnyValue, TTI::OP_None});
+          unsigned NumAccesses = getEstimatedVLFor(FVTy);
+          return NumAccesses * MemOpCost;
+        }
+      }
+    }
+  }
+
   InstructionCost MemCost =
       getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
   unsigned VF = FVTy->getNumElements() / Factor;
