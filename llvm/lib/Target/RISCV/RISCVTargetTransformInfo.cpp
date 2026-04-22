@@ -1161,11 +1161,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
         if (TLI->isLegalInterleavedAccessType(SubVecTy, NumOfFields, Alignment,
                                               AddressSpace, DL)) {
           // The cost is proportional to the total number of element accesses.
-          InstructionCost MemOpCost =
-              getMemoryOpCost(Opcode, FVTy->getElementType(), Alignment, 0,
-                              CostKind, {TTI::OK_AnyValue, TTI::OP_None});
           unsigned NumAccesses = getEstimatedVLFor(FVTy);
-          return NumAccesses * MemOpCost;
+          return NumAccesses * TTI::TCC_Basic;
         }
       }
     }
