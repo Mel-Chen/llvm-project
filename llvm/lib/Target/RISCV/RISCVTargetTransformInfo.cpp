@@ -1148,6 +1148,9 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   // shufflevectors and a wide masked store. The interleaved memory access pass
   // will lower them into vlsseg/vssseg intrinsics.
   if (UseMaskForGaps) {
+    assert(llvm::is_sorted(Indices) && "Indices must be sorted");
+    assert(llvm::adjacent_find(Indices) == Indices.end() &&
+           "Indices should not contain duplicate elements");
     unsigned NumOfFields = Indices.size();
     bool IsTailGapOnly = NumOfFields > 1 && (NumOfFields == Indices.back() + 1);
     if (IsTailGapOnly &&
