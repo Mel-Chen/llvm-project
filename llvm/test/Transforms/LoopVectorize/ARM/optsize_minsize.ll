@@ -181,10 +181,30 @@ for.cond.cleanup:
 define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n) {
 ; DEFAULT-LABEL: define void @tail_predicate_without_optsize(
 ; DEFAULT-SAME: ptr [[P:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i32 [[N:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[TMP69:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT1]], <8 x i8> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i8> poison, i8 [[C]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT3]], <8 x i8> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[TMP5:%.*]] = mul <8 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>
+; DEFAULT-NEXT:    [[TMP1:%.*]] = mul <8 x i8> <i8 0, i8 0, i8 1, i8 1, i8 2, i8 2, i8 3, i8 3>, [[BROADCAST_SPLAT2]]
+; DEFAULT-NEXT:    [[TMP2:%.*]] = add <8 x i8> [[TMP1]], [[TMP5]]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = mul <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 1, i8 1, i8 1, i8 1>, [[BROADCAST_SPLAT4]]
+; DEFAULT-NEXT:    [[TMP4:%.*]] = add <8 x i8> [[TMP2]], [[TMP3]]
+; DEFAULT-NEXT:    store <8 x i8> [[TMP4]], ptr [[P]], align 1
+; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
+; DEFAULT:       [[SCALAR_PH]]:
+; DEFAULT-NEXT:    br label %[[FOR_BODY1:.*]]
+; DEFAULT:       [[FOR_BODY1]]:
+; DEFAULT-NEXT:    [[TMP69:%.*]] = phi i64 [ 8, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY1]] ]
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[TMP69]] to i8
 ; DEFAULT-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP0]]
 ; DEFAULT-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP0]], 1
@@ -197,7 +217,7 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-NEXT:    store i8 [[TMP71]], ptr [[TMP70]], align 1
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[TMP69]], 1
 ; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 15
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY]]
+; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY1]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -294,7 +314,7 @@ define void @dont_vectorize_with_minsize() {
 ; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP9]], align 2
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
@@ -400,7 +420,7 @@ define void @vectorization_forced() {
 ; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP9]], align 2
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:

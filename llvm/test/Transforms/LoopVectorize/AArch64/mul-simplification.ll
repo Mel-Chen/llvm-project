@@ -6,21 +6,20 @@ target triple = "arm64-apple-macosx"
 ; Test case for https://github.com/llvm/llvm-project/issues/107015.
 define i64 @mul_select_operand_known_1_via_scev() {
 ; CHECK-LABEL: define i64 @mul_select_operand_known_1_via_scev() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 12, %[[ENTRY]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IV]], 1
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 1, 1
 ; CHECK-NEXT:    [[CMP1_I:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[NARROW_I:%.*]] = select i1 [[CMP1_I]], i32 1, i32 [[IV]]
+; CHECK-NEXT:    [[NARROW_I:%.*]] = select i1 [[CMP1_I]], i32 1, i32 1
 ; CHECK-NEXT:    [[MUL:%.*]] = zext nneg i32 [[NARROW_I]] to i64
-; CHECK-NEXT:    [[RED_NEXT]] = mul nsw i64 [[RED]], [[MUL]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[RED_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = mul i64 [[MUL]], 12
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:

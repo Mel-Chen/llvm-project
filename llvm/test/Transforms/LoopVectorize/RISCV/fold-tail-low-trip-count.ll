@@ -29,15 +29,35 @@ define void @low_trip_count_small(i32 %x, ptr %dst) {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 1)
 ; NO-VP-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 4)
+; NO-VP-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; NO-VP-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 4)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMIN1]], 4
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NO-VP:       [[VECTOR_PH]]:
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMIN1]], 4
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMIN1]], [[N_MOD_VF]]
+; NO-VP-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC]]
+; NO-VP-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i32
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
-; NO-VP-NEXT:    [[PTR:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
-; NO-VP-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NO-VP-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 1
+; NO-VP-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP3]], align 1
+; NO-VP-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; NO-VP:       [[MIDDLE_BLOCK]]:
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMIN1]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP:       [[SCALAR_PH]]:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[DST]], %[[ENTRY]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; NO-VP-NEXT:    br label %[[LOOP1:.*]]
+; NO-VP:       [[LOOP1]]:
+; NO-VP-NEXT:    [[PTR:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_NEXT:%.*]], %[[LOOP1]] ]
+; NO-VP-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; NO-VP-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 1
 ; NO-VP-NEXT:    store i8 0, ptr [[PTR_NEXT]], align 1
 ; NO-VP-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[UMIN]]
-; NO-VP-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; NO-VP-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -84,17 +104,37 @@ define ptr @low_trip_count_small_with_live_out(i32 %x, ptr %dst) {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 1)
 ; NO-VP-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 4)
+; NO-VP-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; NO-VP-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 4)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMIN1]], 4
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NO-VP:       [[VECTOR_PH]]:
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMIN1]], 4
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMIN1]], [[N_MOD_VF]]
+; NO-VP-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC]]
+; NO-VP-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i32
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
-; NO-VP-NEXT:    [[PTR:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
-; NO-VP-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NO-VP-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 1
+; NO-VP-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP3]], align 1
+; NO-VP-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; NO-VP:       [[MIDDLE_BLOCK]]:
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMIN1]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP:       [[SCALAR_PH]]:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[DST]], %[[ENTRY]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; NO-VP-NEXT:    br label %[[LOOP1:.*]]
+; NO-VP:       [[LOOP1]]:
+; NO-VP-NEXT:    [[PTR:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_NEXT:%.*]], %[[LOOP1]] ]
+; NO-VP-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; NO-VP-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 1
 ; NO-VP-NEXT:    store i8 0, ptr [[PTR_NEXT]], align 1
 ; NO-VP-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[UMIN]]
-; NO-VP-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; NO-VP-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
-; NO-VP-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_NEXT]], %[[LOOP]] ]
+; NO-VP-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_NEXT]], %[[LOOP1]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
 ; NO-VP-NEXT:    ret ptr [[PTR_NEXT_LCSSA]]
 ;
 entry:

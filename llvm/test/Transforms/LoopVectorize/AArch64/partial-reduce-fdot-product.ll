@@ -895,27 +895,44 @@ for.exit:
 define double @chained_fp_reduction_no_partial_reduce(ptr %p) #1 {
 ; CHECK-LABEL: define double @chained_fp_reduction_no_partial_reduce(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[LOOP:.*]]:
+; CHECK-NEXT:  [[LOOP:.*:]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[IV_NEXT:%.*]], %[[EXIT]] ]
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[LOOP]] ], [ [[ADD3:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[EXIT]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[EXIT]] ], [ [[ADD3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi double [ -0.000000e+00, %[[EXIT]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [11 x float], ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [11 x float], ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 12
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP2]], i64 12
 ; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[EXT1:%.*]] = fpext float [[LD1]] to double
+; CHECK-NEXT:    [[TMP8:%.*]] = fpext float [[TMP6]] to double
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd reassoc contract double [[ACCUM]], [[EXT1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd reassoc contract double [[VEC_PHI1]], [[TMP8]]
 ; CHECK-NEXT:    [[LD2:%.*]] = load float, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[EXT2:%.*]] = fpext float [[LD2]] to double
+; CHECK-NEXT:    [[TMP14:%.*]] = fpext float [[TMP12]] to double
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd reassoc contract double [[ADD1]], [[EXT2]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd reassoc contract double [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[LD3:%.*]] = load float, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[EXT3:%.*]] = fpext float [[LD3]] to double
+; CHECK-NEXT:    [[TMP20:%.*]] = fpext float [[TMP18]] to double
 ; CHECK-NEXT:    [[ADD3]] = fadd reassoc contract double [[ADD2]], [[EXT3]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 11
-; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT1:.*]], label %[[EXIT]]
+; CHECK-NEXT:    [[TMP22]] = fadd reassoc contract double [[TMP16]], [[TMP20]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 2
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[EXIT1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[EXIT1]]:
-; CHECK-NEXT:    [[ADD3_LCSSA:%.*]] = phi double [ [[ADD3]], %[[EXIT]] ]
+; CHECK-NEXT:    [[ADD3_LCSSA:%.*]] = fadd reassoc contract double [[TMP22]], [[ADD3]]
+; CHECK-NEXT:    br label %[[EXIT2:.*]]
+; CHECK:       [[EXIT2]]:
 ; CHECK-NEXT:    ret double [[ADD3_LCSSA]]
 ;
 entry:
@@ -972,7 +989,7 @@ define double @ext_fmul_half_to_double(i64 %n, ptr %a, i8 %b) #2 {
 ; CHECK-NEXT:    [[TMP10]] = fadd reassoc contract <8 x double> [[VEC_PHI1]], [[TMP8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <8 x double> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> [[BIN_RDX]])

@@ -628,20 +628,33 @@ exit:
 }
 
 define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
-; COMMON-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
-; COMMON-SAME: ptr [[DST:%.*]]) {
-; COMMON-NEXT:  [[ENTRY:.*]]:
-; COMMON-NEXT:    br label %[[LOOP:.*]]
-; COMMON:       [[LOOP]]:
-; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; COMMON-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
-; COMMON-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
-; COMMON-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
-; COMMON-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; COMMON-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 7
-; COMMON-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; COMMON:       [[EXIT]]:
-; COMMON-NEXT:    ret void
+; DEFAULT-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
+; DEFAULT-SAME: ptr [[DST:%.*]]) {
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    store <4 x i8> <i8 0, i8 1, i8 2, i8 3>, ptr [[DST]], align 1
+; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
+; DEFAULT:       [[SCALAR_PH]]:
+;
+; PRED-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
+; PRED-SAME: ptr [[DST:%.*]]) {
+; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:    br label %[[LOOP:.*]]
+; PRED:       [[LOOP]]:
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
+; PRED-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
+; PRED-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
+; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 7
+; PRED-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -813,7 +826,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; DEFAULT-NEXT:    [[TMP80:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP80]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP80]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -1032,7 +1045,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
@@ -1207,7 +1220,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    store <vscale x 4 x i8> [[TMP23]], ptr [[TMP24]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
 ; DEFAULT-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]

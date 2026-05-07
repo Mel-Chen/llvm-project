@@ -107,336 +107,43 @@ exit:
 define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5, 10) %N) {
 ; VF8UF1-LABEL: define void @remove_loop_region_with_replicate_recipe(
 ; VF8UF1-SAME: ptr [[DST:%.*]], i64 range(i64 5, 10) [[N:%.*]]) {
-; VF8UF1-NEXT:  [[ENTRY:.*:]]
-; VF8UF1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
-; VF8UF1-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF8UF1:       [[VECTOR_PH]]:
-; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; VF8UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF8UF1:       [[VECTOR_BODY]]:
-; VF8UF1-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT1]]
-; VF8UF1-NEXT:    [[TMP3:%.*]] = extractelement <8 x i1> [[TMP2]], i64 0
-; VF8UF1-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF8UF1:       [[PRED_STORE_IF]]:
-; VF8UF1-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[DST]], i64 2
-; VF8UF1-NEXT:    store i16 0, ptr [[TMP4]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF8UF1:       [[PRED_STORE_CONTINUE]]:
-; VF8UF1-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP2]], i64 1
-; VF8UF1-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF8UF1:       [[PRED_STORE_IF1]]:
-; VF8UF1-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; VF8UF1-NEXT:    store i16 0, ptr [[TMP6]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF8UF1:       [[PRED_STORE_CONTINUE2]]:
-; VF8UF1-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP2]], i64 2
-; VF8UF1-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF8UF1:       [[PRED_STORE_IF3]]:
-; VF8UF1-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[DST]], i64 4
-; VF8UF1-NEXT:    store i16 0, ptr [[TMP8]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF8UF1:       [[PRED_STORE_CONTINUE4]]:
-; VF8UF1-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP2]], i64 3
-; VF8UF1-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF8UF1:       [[PRED_STORE_IF5]]:
-; VF8UF1-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[DST]], i64 5
-; VF8UF1-NEXT:    store i16 0, ptr [[TMP10]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF8UF1:       [[PRED_STORE_CONTINUE6]]:
-; VF8UF1-NEXT:    [[TMP11:%.*]] = extractelement <8 x i1> [[TMP2]], i64 4
-; VF8UF1-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF8UF1:       [[PRED_STORE_IF7]]:
-; VF8UF1-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[DST]], i64 6
-; VF8UF1-NEXT:    store i16 0, ptr [[TMP12]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF8UF1:       [[PRED_STORE_CONTINUE8]]:
-; VF8UF1-NEXT:    [[TMP13:%.*]] = extractelement <8 x i1> [[TMP2]], i64 5
-; VF8UF1-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF8UF1:       [[PRED_STORE_IF9]]:
-; VF8UF1-NEXT:    [[TMP14:%.*]] = getelementptr i16, ptr [[DST]], i64 7
-; VF8UF1-NEXT:    store i16 0, ptr [[TMP14]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
+; VF8UF1-NEXT:  [[PRED_STORE_IF9:.*]]:
+; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE10:.*]]
 ; VF8UF1:       [[PRED_STORE_CONTINUE10]]:
-; VF8UF1-NEXT:    [[TMP15:%.*]] = extractelement <8 x i1> [[TMP2]], i64 6
-; VF8UF1-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF8UF1:       [[PRED_STORE_IF11]]:
-; VF8UF1-NEXT:    [[TMP16:%.*]] = getelementptr i16, ptr [[DST]], i64 8
+; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[PRED_STORE_IF9]] ], [ [[IV_NEXT:%.*]], %[[PRED_STORE_CONTINUE10]] ]
+; VF8UF1-NEXT:    [[TMP16:%.*]] = getelementptr i16, ptr [[DST]], i64 [[IV]]
 ; VF8UF1-NEXT:    store i16 0, ptr [[TMP16]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; VF8UF1:       [[PRED_STORE_CONTINUE12]]:
-; VF8UF1-NEXT:    [[TMP17:%.*]] = extractelement <8 x i1> [[TMP2]], i64 7
-; VF8UF1-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF8UF1:       [[PRED_STORE_IF13]]:
-; VF8UF1-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[DST]], i64 9
-; VF8UF1-NEXT:    store i16 0, ptr [[TMP18]], align 2
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF8UF1:       [[PRED_STORE_CONTINUE14]]:
-; VF8UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF8UF1:       [[MIDDLE_BLOCK]]:
-; VF8UF1-NEXT:    br label %[[EXIT:.*]]
+; VF8UF1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VF8UF1-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; VF8UF1-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE10]]
 ; VF8UF1:       [[EXIT]]:
 ; VF8UF1-NEXT:    ret void
 ;
 ; VF8UF2-LABEL: define void @remove_loop_region_with_replicate_recipe(
 ; VF8UF2-SAME: ptr [[DST:%.*]], i64 range(i64 5, 10) [[N:%.*]]) {
-; VF8UF2-NEXT:  [[ENTRY:.*:]]
-; VF8UF2-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
-; VF8UF2-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF8UF2:       [[VECTOR_PH]]:
-; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; VF8UF2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT1]]
-; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp ule <8 x i64> <i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT1]]
-; VF8UF2-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP2]], i64 0
-; VF8UF2-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF8UF2:       [[PRED_STORE_IF]]:
-; VF8UF2-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[DST]], i64 2
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP5]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF8UF2:       [[PRED_STORE_CONTINUE]]:
-; VF8UF2-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP2]], i64 1
-; VF8UF2-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF8UF2:       [[PRED_STORE_IF1]]:
-; VF8UF2-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP7]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF8UF2:       [[PRED_STORE_CONTINUE2]]:
-; VF8UF2-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP2]], i64 2
-; VF8UF2-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF8UF2:       [[PRED_STORE_IF3]]:
-; VF8UF2-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[DST]], i64 4
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP9]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF8UF2:       [[PRED_STORE_CONTINUE4]]:
-; VF8UF2-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP2]], i64 3
-; VF8UF2-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF8UF2:       [[PRED_STORE_IF5]]:
-; VF8UF2-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[DST]], i64 5
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP11]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF8UF2:       [[PRED_STORE_CONTINUE6]]:
-; VF8UF2-NEXT:    [[TMP12:%.*]] = extractelement <8 x i1> [[TMP2]], i64 4
-; VF8UF2-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF8UF2:       [[PRED_STORE_IF7]]:
-; VF8UF2-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[DST]], i64 6
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP13]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF8UF2:       [[PRED_STORE_CONTINUE8]]:
-; VF8UF2-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP2]], i64 5
-; VF8UF2-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF8UF2:       [[PRED_STORE_IF9]]:
-; VF8UF2-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[DST]], i64 7
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP15]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; VF8UF2:       [[PRED_STORE_CONTINUE10]]:
-; VF8UF2-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP2]], i64 6
-; VF8UF2-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF8UF2:       [[PRED_STORE_IF11]]:
-; VF8UF2-NEXT:    [[TMP17:%.*]] = getelementptr i16, ptr [[DST]], i64 8
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP17]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; VF8UF2:       [[PRED_STORE_CONTINUE12]]:
-; VF8UF2-NEXT:    [[TMP18:%.*]] = extractelement <8 x i1> [[TMP2]], i64 7
-; VF8UF2-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF8UF2:       [[PRED_STORE_IF13]]:
-; VF8UF2-NEXT:    [[TMP19:%.*]] = getelementptr i16, ptr [[DST]], i64 9
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP19]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF8UF2:       [[PRED_STORE_CONTINUE14]]:
-; VF8UF2-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
-; VF8UF2-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; VF8UF2:       [[PRED_STORE_IF15]]:
-; VF8UF2-NEXT:    [[TMP21:%.*]] = getelementptr i16, ptr [[DST]], i64 10
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP21]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
-; VF8UF2:       [[PRED_STORE_CONTINUE16]]:
-; VF8UF2-NEXT:    [[TMP22:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
-; VF8UF2-NEXT:    br i1 [[TMP22]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; VF8UF2:       [[PRED_STORE_IF17]]:
-; VF8UF2-NEXT:    [[TMP23:%.*]] = getelementptr i16, ptr [[DST]], i64 11
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP23]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; VF8UF2:       [[PRED_STORE_CONTINUE18]]:
-; VF8UF2-NEXT:    [[TMP24:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
-; VF8UF2-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; VF8UF2:       [[PRED_STORE_IF19]]:
-; VF8UF2-NEXT:    [[TMP25:%.*]] = getelementptr i16, ptr [[DST]], i64 12
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP25]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; VF8UF2:       [[PRED_STORE_CONTINUE20]]:
-; VF8UF2-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
-; VF8UF2-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
-; VF8UF2:       [[PRED_STORE_IF21]]:
-; VF8UF2-NEXT:    [[TMP27:%.*]] = getelementptr i16, ptr [[DST]], i64 13
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP27]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; VF8UF2:       [[PRED_STORE_CONTINUE22]]:
-; VF8UF2-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
-; VF8UF2-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
-; VF8UF2:       [[PRED_STORE_IF23]]:
-; VF8UF2-NEXT:    [[TMP29:%.*]] = getelementptr i16, ptr [[DST]], i64 14
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP29]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
-; VF8UF2:       [[PRED_STORE_CONTINUE24]]:
-; VF8UF2-NEXT:    [[TMP30:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
-; VF8UF2-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
-; VF8UF2:       [[PRED_STORE_IF25]]:
-; VF8UF2-NEXT:    [[TMP31:%.*]] = getelementptr i16, ptr [[DST]], i64 15
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP31]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
+; VF8UF2-NEXT:  [[PRED_STORE_IF25:.*]]:
+; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE26:.*]]
 ; VF8UF2:       [[PRED_STORE_CONTINUE26]]:
-; VF8UF2-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
-; VF8UF2-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
-; VF8UF2:       [[PRED_STORE_IF27]]:
-; VF8UF2-NEXT:    [[TMP33:%.*]] = getelementptr i16, ptr [[DST]], i64 16
+; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[PRED_STORE_IF25]] ], [ [[IV_NEXT:%.*]], %[[PRED_STORE_CONTINUE26]] ]
+; VF8UF2-NEXT:    [[TMP33:%.*]] = getelementptr i16, ptr [[DST]], i64 [[IV]]
 ; VF8UF2-NEXT:    store i16 0, ptr [[TMP33]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
-; VF8UF2:       [[PRED_STORE_CONTINUE28]]:
-; VF8UF2-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
-; VF8UF2-NEXT:    br i1 [[TMP34]], label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
-; VF8UF2:       [[PRED_STORE_IF29]]:
-; VF8UF2-NEXT:    [[TMP35:%.*]] = getelementptr i16, ptr [[DST]], i64 17
-; VF8UF2-NEXT:    store i16 0, ptr [[TMP35]], align 2
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
-; VF8UF2:       [[PRED_STORE_CONTINUE30]]:
-; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF8UF2:       [[MIDDLE_BLOCK]]:
-; VF8UF2-NEXT:    br label %[[EXIT:.*]]
+; VF8UF2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VF8UF2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; VF8UF2-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE26]]
 ; VF8UF2:       [[EXIT]]:
 ; VF8UF2-NEXT:    ret void
 ;
 ; VF16UF1-LABEL: define void @remove_loop_region_with_replicate_recipe(
 ; VF16UF1-SAME: ptr [[DST:%.*]], i64 range(i64 5, 10) [[N:%.*]]) {
-; VF16UF1-NEXT:  [[ENTRY:.*:]]
-; VF16UF1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
-; VF16UF1-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF16UF1:       [[VECTOR_PH]]:
-; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; VF16UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
-; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[TMP2:%.*]] = icmp ule <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT1]]
-; VF16UF1-NEXT:    [[TMP3:%.*]] = extractelement <16 x i1> [[TMP2]], i64 0
-; VF16UF1-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF16UF1:       [[PRED_STORE_IF]]:
-; VF16UF1-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[DST]], i64 2
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP4]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF16UF1:       [[PRED_STORE_CONTINUE]]:
-; VF16UF1-NEXT:    [[TMP5:%.*]] = extractelement <16 x i1> [[TMP2]], i64 1
-; VF16UF1-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF16UF1:       [[PRED_STORE_IF1]]:
-; VF16UF1-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP6]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF16UF1:       [[PRED_STORE_CONTINUE2]]:
-; VF16UF1-NEXT:    [[TMP7:%.*]] = extractelement <16 x i1> [[TMP2]], i64 2
-; VF16UF1-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF16UF1:       [[PRED_STORE_IF3]]:
-; VF16UF1-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[DST]], i64 4
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP8]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF16UF1:       [[PRED_STORE_CONTINUE4]]:
-; VF16UF1-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP2]], i64 3
-; VF16UF1-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF16UF1:       [[PRED_STORE_IF5]]:
-; VF16UF1-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[DST]], i64 5
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP10]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF16UF1:       [[PRED_STORE_CONTINUE6]]:
-; VF16UF1-NEXT:    [[TMP11:%.*]] = extractelement <16 x i1> [[TMP2]], i64 4
-; VF16UF1-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF16UF1:       [[PRED_STORE_IF7]]:
-; VF16UF1-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[DST]], i64 6
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP12]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF16UF1:       [[PRED_STORE_CONTINUE8]]:
-; VF16UF1-NEXT:    [[TMP13:%.*]] = extractelement <16 x i1> [[TMP2]], i64 5
-; VF16UF1-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF16UF1:       [[PRED_STORE_IF9]]:
-; VF16UF1-NEXT:    [[TMP14:%.*]] = getelementptr i16, ptr [[DST]], i64 7
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP14]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; VF16UF1:       [[PRED_STORE_CONTINUE10]]:
-; VF16UF1-NEXT:    [[TMP15:%.*]] = extractelement <16 x i1> [[TMP2]], i64 6
-; VF16UF1-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF16UF1:       [[PRED_STORE_IF11]]:
-; VF16UF1-NEXT:    [[TMP16:%.*]] = getelementptr i16, ptr [[DST]], i64 8
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP16]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; VF16UF1:       [[PRED_STORE_CONTINUE12]]:
-; VF16UF1-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP2]], i64 7
-; VF16UF1-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF16UF1:       [[PRED_STORE_IF13]]:
-; VF16UF1-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[DST]], i64 9
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP18]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF16UF1:       [[PRED_STORE_CONTINUE14]]:
-; VF16UF1-NEXT:    [[TMP19:%.*]] = extractelement <16 x i1> [[TMP2]], i64 8
-; VF16UF1-NEXT:    br i1 [[TMP19]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; VF16UF1:       [[PRED_STORE_IF15]]:
-; VF16UF1-NEXT:    [[TMP20:%.*]] = getelementptr i16, ptr [[DST]], i64 10
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP20]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
-; VF16UF1:       [[PRED_STORE_CONTINUE16]]:
-; VF16UF1-NEXT:    [[TMP21:%.*]] = extractelement <16 x i1> [[TMP2]], i64 9
-; VF16UF1-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; VF16UF1:       [[PRED_STORE_IF17]]:
-; VF16UF1-NEXT:    [[TMP22:%.*]] = getelementptr i16, ptr [[DST]], i64 11
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP22]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; VF16UF1:       [[PRED_STORE_CONTINUE18]]:
-; VF16UF1-NEXT:    [[TMP23:%.*]] = extractelement <16 x i1> [[TMP2]], i64 10
-; VF16UF1-NEXT:    br i1 [[TMP23]], label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; VF16UF1:       [[PRED_STORE_IF19]]:
-; VF16UF1-NEXT:    [[TMP24:%.*]] = getelementptr i16, ptr [[DST]], i64 12
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP24]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; VF16UF1:       [[PRED_STORE_CONTINUE20]]:
-; VF16UF1-NEXT:    [[TMP25:%.*]] = extractelement <16 x i1> [[TMP2]], i64 11
-; VF16UF1-NEXT:    br i1 [[TMP25]], label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
-; VF16UF1:       [[PRED_STORE_IF21]]:
-; VF16UF1-NEXT:    [[TMP26:%.*]] = getelementptr i16, ptr [[DST]], i64 13
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP26]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; VF16UF1:       [[PRED_STORE_CONTINUE22]]:
-; VF16UF1-NEXT:    [[TMP27:%.*]] = extractelement <16 x i1> [[TMP2]], i64 12
-; VF16UF1-NEXT:    br i1 [[TMP27]], label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
-; VF16UF1:       [[PRED_STORE_IF23]]:
-; VF16UF1-NEXT:    [[TMP28:%.*]] = getelementptr i16, ptr [[DST]], i64 14
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP28]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
-; VF16UF1:       [[PRED_STORE_CONTINUE24]]:
-; VF16UF1-NEXT:    [[TMP29:%.*]] = extractelement <16 x i1> [[TMP2]], i64 13
-; VF16UF1-NEXT:    br i1 [[TMP29]], label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
-; VF16UF1:       [[PRED_STORE_IF25]]:
-; VF16UF1-NEXT:    [[TMP30:%.*]] = getelementptr i16, ptr [[DST]], i64 15
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP30]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
+; VF16UF1-NEXT:  [[PRED_STORE_IF25:.*]]:
+; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE26:.*]]
 ; VF16UF1:       [[PRED_STORE_CONTINUE26]]:
-; VF16UF1-NEXT:    [[TMP31:%.*]] = extractelement <16 x i1> [[TMP2]], i64 14
-; VF16UF1-NEXT:    br i1 [[TMP31]], label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
-; VF16UF1:       [[PRED_STORE_IF27]]:
-; VF16UF1-NEXT:    [[TMP32:%.*]] = getelementptr i16, ptr [[DST]], i64 16
+; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[PRED_STORE_IF25]] ], [ [[IV_NEXT:%.*]], %[[PRED_STORE_CONTINUE26]] ]
+; VF16UF1-NEXT:    [[TMP32:%.*]] = getelementptr i16, ptr [[DST]], i64 [[IV]]
 ; VF16UF1-NEXT:    store i16 0, ptr [[TMP32]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
-; VF16UF1:       [[PRED_STORE_CONTINUE28]]:
-; VF16UF1-NEXT:    [[TMP33:%.*]] = extractelement <16 x i1> [[TMP2]], i64 15
-; VF16UF1-NEXT:    br i1 [[TMP33]], label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
-; VF16UF1:       [[PRED_STORE_IF29]]:
-; VF16UF1-NEXT:    [[TMP34:%.*]] = getelementptr i16, ptr [[DST]], i64 17
-; VF16UF1-NEXT:    store i16 0, ptr [[TMP34]], align 2
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
-; VF16UF1:       [[PRED_STORE_CONTINUE30]]:
-; VF16UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF16UF1:       [[MIDDLE_BLOCK]]:
-; VF16UF1-NEXT:    br label %[[EXIT:.*]]
+; VF16UF1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VF16UF1-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; VF16UF1-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE26]]
 ; VF16UF1:       [[EXIT]]:
 ; VF16UF1-NEXT:    ret void
 ;
@@ -617,455 +324,99 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1-NEXT:    [[STEP:%.*]] = add i64 [[FR]], -65534
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = udiv i64 15, [[STEP]]
 ; VF8UF1-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
-; VF8UF1-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF8UF1:       [[VECTOR_PH]]:
-; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; VF8UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF1:       [[VECTOR_BODY]]:
-; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT]]
-; VF8UF1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
-; VF8UF1-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF8UF1:       [[PRED_STORE_IF]]:
-; VF8UF1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STEP]]
-; VF8UF1-NEXT:    store i8 0, ptr [[TMP8]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
+; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; VF8UF1-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[STEP]]
+; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE:.*]]
 ; VF8UF1:       [[PRED_STORE_CONTINUE]]:
-; VF8UF1-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
-; VF8UF1-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF8UF1:       [[PRED_STORE_IF1]]:
 ; VF8UF1-NEXT:    [[TMP10:%.*]] = mul i64 1, [[STEP]]
 ; VF8UF1-NEXT:    [[TMP11:%.*]] = add i64 0, [[TMP10]]
-; VF8UF1-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[STEP]]
-; VF8UF1-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP12]]
-; VF8UF1-NEXT:    store i8 0, ptr [[TMP13]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF8UF1:       [[PRED_STORE_CONTINUE2]]:
-; VF8UF1-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
-; VF8UF1-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF8UF1:       [[PRED_STORE_IF3]]:
 ; VF8UF1-NEXT:    [[TMP15:%.*]] = mul i64 2, [[STEP]]
 ; VF8UF1-NEXT:    [[TMP16:%.*]] = add i64 0, [[TMP15]]
-; VF8UF1-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], [[STEP]]
-; VF8UF1-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP17]]
-; VF8UF1-NEXT:    store i8 0, ptr [[TMP18]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF8UF1:       [[PRED_STORE_CONTINUE4]]:
-; VF8UF1-NEXT:    [[TMP19:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
-; VF8UF1-NEXT:    br i1 [[TMP19]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF8UF1:       [[PRED_STORE_IF5]]:
 ; VF8UF1-NEXT:    [[TMP20:%.*]] = mul i64 3, [[STEP]]
 ; VF8UF1-NEXT:    [[TMP21:%.*]] = add i64 0, [[TMP20]]
-; VF8UF1-NEXT:    [[TMP22:%.*]] = add i64 [[TMP21]], [[STEP]]
-; VF8UF1-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP22]]
-; VF8UF1-NEXT:    store i8 0, ptr [[TMP23]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF8UF1:       [[PRED_STORE_CONTINUE6]]:
-; VF8UF1-NEXT:    [[TMP24:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
-; VF8UF1-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF8UF1:       [[PRED_STORE_IF7]]:
 ; VF8UF1-NEXT:    [[TMP25:%.*]] = mul i64 4, [[STEP]]
 ; VF8UF1-NEXT:    [[TMP26:%.*]] = add i64 0, [[TMP25]]
-; VF8UF1-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], [[STEP]]
-; VF8UF1-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP27]]
-; VF8UF1-NEXT:    store i8 0, ptr [[TMP28]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF8UF1:       [[PRED_STORE_CONTINUE8]]:
-; VF8UF1-NEXT:    [[TMP29:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
-; VF8UF1-NEXT:    br i1 [[TMP29]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF8UF1:       [[PRED_STORE_IF9]]:
 ; VF8UF1-NEXT:    [[TMP30:%.*]] = mul i64 5, [[STEP]]
 ; VF8UF1-NEXT:    [[TMP31:%.*]] = add i64 0, [[TMP30]]
-; VF8UF1-NEXT:    [[TMP32:%.*]] = add i64 [[TMP31]], [[STEP]]
-; VF8UF1-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP32]]
-; VF8UF1-NEXT:    store i8 0, ptr [[TMP33]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; VF8UF1:       [[PRED_STORE_CONTINUE10]]:
-; VF8UF1-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
-; VF8UF1-NEXT:    br i1 [[TMP34]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF8UF1:       [[PRED_STORE_IF11]]:
 ; VF8UF1-NEXT:    [[TMP35:%.*]] = mul i64 6, [[STEP]]
 ; VF8UF1-NEXT:    [[TMP36:%.*]] = add i64 0, [[TMP35]]
+; VF8UF1-NEXT:    [[TMP22:%.*]] = mul i64 7, [[STEP]]
+; VF8UF1-NEXT:    [[TMP24:%.*]] = add i64 0, [[TMP22]]
+; VF8UF1-NEXT:    [[TMP17:%.*]] = add i64 [[TMP11]], [[STEP]]
+; VF8UF1-NEXT:    [[TMP18:%.*]] = add i64 [[TMP16]], [[STEP]]
+; VF8UF1-NEXT:    [[TMP19:%.*]] = add i64 [[TMP21]], [[STEP]]
+; VF8UF1-NEXT:    [[TMP32:%.*]] = add i64 [[TMP26]], [[STEP]]
+; VF8UF1-NEXT:    [[TMP33:%.*]] = add i64 [[TMP31]], [[STEP]]
 ; VF8UF1-NEXT:    [[TMP37:%.*]] = add i64 [[TMP36]], [[STEP]]
-; VF8UF1-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP37]]
+; VF8UF1-NEXT:    [[TMP23:%.*]] = add i64 [[TMP24]], [[STEP]]
+; VF8UF1-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STEP]]
+; VF8UF1-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP17]]
+; VF8UF1-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP18]]
+; VF8UF1-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP19]]
+; VF8UF1-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP32]]
+; VF8UF1-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP33]]
+; VF8UF1-NEXT:    [[TMP42:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP37]]
+; VF8UF1-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP23]]
 ; VF8UF1-NEXT:    store i8 0, ptr [[TMP38]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
+; VF8UF1-NEXT:    store i8 0, ptr [[TMP34]], align 1
+; VF8UF1-NEXT:    store i8 0, ptr [[TMP40]], align 1
+; VF8UF1-NEXT:    store i8 0, ptr [[TMP27]], align 1
+; VF8UF1-NEXT:    store i8 0, ptr [[TMP28]], align 1
+; VF8UF1-NEXT:    store i8 0, ptr [[TMP29]], align 1
+; VF8UF1-NEXT:    store i8 0, ptr [[TMP42]], align 1
+; VF8UF1-NEXT:    store i8 0, ptr [[TMP43]], align 1
+; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE12:.*]]
 ; VF8UF1:       [[PRED_STORE_CONTINUE12]]:
-; VF8UF1-NEXT:    [[TMP39:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
+; VF8UF1-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; VF8UF1-NEXT:    br i1 [[TMP39]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF8UF1:       [[PRED_STORE_IF13]]:
-; VF8UF1-NEXT:    [[TMP40:%.*]] = mul i64 7, [[STEP]]
-; VF8UF1-NEXT:    [[TMP41:%.*]] = add i64 0, [[TMP40]]
-; VF8UF1-NEXT:    [[IV_NEXT:%.*]] = add i64 [[TMP41]], [[STEP]]
+; VF8UF1:       [[PRED_STORE_CONTINUE14]]:
+; VF8UF1-NEXT:    br label %[[LOOP:.*]]
+; VF8UF1:       [[LOOP]]:
+; VF8UF1-NEXT:    [[TMP41:%.*]] = phi i64 [ [[TMP2]], %[[PRED_STORE_CONTINUE14]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF1-NEXT:    [[IV_NEXT]] = add i64 [[TMP41]], [[STEP]]
 ; VF8UF1-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_NEXT]]
 ; VF8UF1-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
-; VF8UF1-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF8UF1:       [[PRED_STORE_CONTINUE14]]:
-; VF8UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF8UF1:       [[MIDDLE_BLOCK]]:
-; VF8UF1-NEXT:    br label %[[EXIT:.*]]
-; VF8UF1:       [[EXIT]]:
+; VF8UF1-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], 16
+; VF8UF1-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[PRED_STORE_IF13]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF8UF1:       [[PRED_STORE_IF13]]:
 ; VF8UF1-NEXT:    ret void
 ;
 ; VF8UF2-LABEL: define void @scev_expand_step(
 ; VF8UF2-SAME: i64 [[X:%.*]], ptr [[DST:%.*]]) {
-; VF8UF2-NEXT:  [[ENTRY:.*:]]
+; VF8UF2-NEXT:  [[ENTRY:.*]]:
 ; VF8UF2-NEXT:    [[C:%.*]] = icmp eq i64 [[X]], 65536
 ; VF8UF2-NEXT:    call void @llvm.assume(i1 [[C]])
 ; VF8UF2-NEXT:    [[FR:%.*]] = freeze i64 [[X]]
 ; VF8UF2-NEXT:    [[STEP:%.*]] = add i64 [[FR]], -65534
-; VF8UF2-NEXT:    [[TMP0:%.*]] = udiv i64 15, [[STEP]]
-; VF8UF2-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
-; VF8UF2-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF8UF2:       [[VECTOR_PH]]:
-; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; VF8UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
-; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT]]
-; VF8UF2-NEXT:    [[TMP4:%.*]] = icmp ule <8 x i64> <i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT]]
-; VF8UF2-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
-; VF8UF2-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF8UF2:       [[PRED_STORE_IF]]:
-; VF8UF2-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STEP]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP9]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF8UF2:       [[PRED_STORE_CONTINUE]]:
-; VF8UF2-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
-; VF8UF2-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF8UF2:       [[PRED_STORE_IF1]]:
-; VF8UF2-NEXT:    [[TMP11:%.*]] = mul i64 1, [[STEP]]
-; VF8UF2-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
-; VF8UF2-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP13]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP14]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF8UF2:       [[PRED_STORE_CONTINUE2]]:
-; VF8UF2-NEXT:    [[TMP15:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
-; VF8UF2-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF8UF2:       [[PRED_STORE_IF3]]:
-; VF8UF2-NEXT:    [[TMP16:%.*]] = mul i64 2, [[STEP]]
-; VF8UF2-NEXT:    [[TMP17:%.*]] = add i64 0, [[TMP16]]
-; VF8UF2-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP18]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP19]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF8UF2:       [[PRED_STORE_CONTINUE4]]:
-; VF8UF2-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
-; VF8UF2-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF8UF2:       [[PRED_STORE_IF5]]:
-; VF8UF2-NEXT:    [[TMP21:%.*]] = mul i64 3, [[STEP]]
-; VF8UF2-NEXT:    [[TMP22:%.*]] = add i64 0, [[TMP21]]
-; VF8UF2-NEXT:    [[TMP23:%.*]] = add i64 [[TMP22]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP23]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP24]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF8UF2:       [[PRED_STORE_CONTINUE6]]:
-; VF8UF2-NEXT:    [[TMP25:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
-; VF8UF2-NEXT:    br i1 [[TMP25]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF8UF2:       [[PRED_STORE_IF7]]:
-; VF8UF2-NEXT:    [[TMP26:%.*]] = mul i64 4, [[STEP]]
-; VF8UF2-NEXT:    [[TMP27:%.*]] = add i64 0, [[TMP26]]
-; VF8UF2-NEXT:    [[TMP28:%.*]] = add i64 [[TMP27]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP28]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP29]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF8UF2:       [[PRED_STORE_CONTINUE8]]:
-; VF8UF2-NEXT:    [[TMP30:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
-; VF8UF2-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF8UF2:       [[PRED_STORE_IF9]]:
-; VF8UF2-NEXT:    [[TMP31:%.*]] = mul i64 5, [[STEP]]
-; VF8UF2-NEXT:    [[TMP32:%.*]] = add i64 0, [[TMP31]]
-; VF8UF2-NEXT:    [[TMP33:%.*]] = add i64 [[TMP32]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP33]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP34]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; VF8UF2:       [[PRED_STORE_CONTINUE10]]:
-; VF8UF2-NEXT:    [[TMP35:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
-; VF8UF2-NEXT:    br i1 [[TMP35]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF8UF2:       [[PRED_STORE_IF11]]:
-; VF8UF2-NEXT:    [[TMP36:%.*]] = mul i64 6, [[STEP]]
-; VF8UF2-NEXT:    [[TMP37:%.*]] = add i64 0, [[TMP36]]
-; VF8UF2-NEXT:    [[TMP38:%.*]] = add i64 [[TMP37]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP38]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP39]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; VF8UF2:       [[PRED_STORE_CONTINUE12]]:
-; VF8UF2-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
-; VF8UF2-NEXT:    br i1 [[TMP40]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF8UF2:       [[PRED_STORE_IF13]]:
-; VF8UF2-NEXT:    [[TMP41:%.*]] = mul i64 7, [[STEP]]
-; VF8UF2-NEXT:    [[TMP42:%.*]] = add i64 0, [[TMP41]]
-; VF8UF2-NEXT:    [[TMP43:%.*]] = add i64 [[TMP42]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP44:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP43]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP44]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF8UF2:       [[PRED_STORE_CONTINUE14]]:
-; VF8UF2-NEXT:    [[TMP45:%.*]] = extractelement <8 x i1> [[TMP4]], i64 0
-; VF8UF2-NEXT:    br i1 [[TMP45]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; VF8UF2:       [[PRED_STORE_IF15]]:
-; VF8UF2-NEXT:    [[TMP46:%.*]] = mul i64 8, [[STEP]]
-; VF8UF2-NEXT:    [[TMP47:%.*]] = add i64 0, [[TMP46]]
-; VF8UF2-NEXT:    [[TMP48:%.*]] = add i64 [[TMP47]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP48]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP49]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
-; VF8UF2:       [[PRED_STORE_CONTINUE16]]:
-; VF8UF2-NEXT:    [[TMP50:%.*]] = extractelement <8 x i1> [[TMP4]], i64 1
-; VF8UF2-NEXT:    br i1 [[TMP50]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; VF8UF2:       [[PRED_STORE_IF17]]:
-; VF8UF2-NEXT:    [[TMP51:%.*]] = mul i64 9, [[STEP]]
-; VF8UF2-NEXT:    [[TMP52:%.*]] = add i64 0, [[TMP51]]
-; VF8UF2-NEXT:    [[TMP53:%.*]] = add i64 [[TMP52]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP53]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP54]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; VF8UF2:       [[PRED_STORE_CONTINUE18]]:
-; VF8UF2-NEXT:    [[TMP55:%.*]] = extractelement <8 x i1> [[TMP4]], i64 2
-; VF8UF2-NEXT:    br i1 [[TMP55]], label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; VF8UF2:       [[PRED_STORE_IF19]]:
-; VF8UF2-NEXT:    [[TMP56:%.*]] = mul i64 10, [[STEP]]
-; VF8UF2-NEXT:    [[TMP57:%.*]] = add i64 0, [[TMP56]]
-; VF8UF2-NEXT:    [[TMP58:%.*]] = add i64 [[TMP57]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP59:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP58]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP59]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; VF8UF2:       [[PRED_STORE_CONTINUE20]]:
-; VF8UF2-NEXT:    [[TMP60:%.*]] = extractelement <8 x i1> [[TMP4]], i64 3
-; VF8UF2-NEXT:    br i1 [[TMP60]], label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
-; VF8UF2:       [[PRED_STORE_IF21]]:
-; VF8UF2-NEXT:    [[TMP61:%.*]] = mul i64 11, [[STEP]]
-; VF8UF2-NEXT:    [[TMP62:%.*]] = add i64 0, [[TMP61]]
-; VF8UF2-NEXT:    [[TMP63:%.*]] = add i64 [[TMP62]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP64:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP63]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP64]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; VF8UF2:       [[PRED_STORE_CONTINUE22]]:
-; VF8UF2-NEXT:    [[TMP65:%.*]] = extractelement <8 x i1> [[TMP4]], i64 4
-; VF8UF2-NEXT:    br i1 [[TMP65]], label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
-; VF8UF2:       [[PRED_STORE_IF23]]:
-; VF8UF2-NEXT:    [[TMP66:%.*]] = mul i64 12, [[STEP]]
-; VF8UF2-NEXT:    [[TMP67:%.*]] = add i64 0, [[TMP66]]
-; VF8UF2-NEXT:    [[TMP68:%.*]] = add i64 [[TMP67]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP68]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP69]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
-; VF8UF2:       [[PRED_STORE_CONTINUE24]]:
-; VF8UF2-NEXT:    [[TMP70:%.*]] = extractelement <8 x i1> [[TMP4]], i64 5
-; VF8UF2-NEXT:    br i1 [[TMP70]], label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
-; VF8UF2:       [[PRED_STORE_IF25]]:
-; VF8UF2-NEXT:    [[TMP71:%.*]] = mul i64 13, [[STEP]]
-; VF8UF2-NEXT:    [[TMP72:%.*]] = add i64 0, [[TMP71]]
-; VF8UF2-NEXT:    [[TMP73:%.*]] = add i64 [[TMP72]], [[STEP]]
-; VF8UF2-NEXT:    [[TMP74:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP73]]
-; VF8UF2-NEXT:    store i8 0, ptr [[TMP74]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
+; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE26:.*]]
 ; VF8UF2:       [[PRED_STORE_CONTINUE26]]:
-; VF8UF2-NEXT:    [[TMP75:%.*]] = extractelement <8 x i1> [[TMP4]], i64 6
-; VF8UF2-NEXT:    br i1 [[TMP75]], label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
-; VF8UF2:       [[PRED_STORE_IF27]]:
-; VF8UF2-NEXT:    [[TMP76:%.*]] = mul i64 14, [[STEP]]
-; VF8UF2-NEXT:    [[TMP77:%.*]] = add i64 0, [[TMP76]]
-; VF8UF2-NEXT:    [[TMP78:%.*]] = add i64 [[TMP77]], [[STEP]]
+; VF8UF2-NEXT:    [[TMP77:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP78:%.*]], %[[PRED_STORE_CONTINUE26]] ]
+; VF8UF2-NEXT:    [[TMP78]] = add i64 [[TMP77]], [[STEP]]
 ; VF8UF2-NEXT:    [[TMP79:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP78]]
 ; VF8UF2-NEXT:    store i8 0, ptr [[TMP79]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
-; VF8UF2:       [[PRED_STORE_CONTINUE28]]:
-; VF8UF2-NEXT:    [[TMP80:%.*]] = extractelement <8 x i1> [[TMP4]], i64 7
-; VF8UF2-NEXT:    br i1 [[TMP80]], label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
-; VF8UF2:       [[PRED_STORE_IF29]]:
-; VF8UF2-NEXT:    [[TMP81:%.*]] = mul i64 15, [[STEP]]
-; VF8UF2-NEXT:    [[TMP82:%.*]] = add i64 0, [[TMP81]]
-; VF8UF2-NEXT:    [[TMP83:%.*]] = add i64 [[TMP82]], [[STEP]]
-; VF8UF2-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP83]]
-; VF8UF2-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
-; VF8UF2:       [[PRED_STORE_CONTINUE30]]:
-; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF8UF2:       [[MIDDLE_BLOCK]]:
-; VF8UF2-NEXT:    br label %[[EXIT:.*]]
+; VF8UF2-NEXT:    [[EC:%.*]] = icmp slt i64 [[TMP78]], 16
+; VF8UF2-NEXT:    br i1 [[EC]], label %[[PRED_STORE_CONTINUE26]], label %[[EXIT:.*]]
 ; VF8UF2:       [[EXIT]]:
 ; VF8UF2-NEXT:    ret void
 ;
 ; VF16UF1-LABEL: define void @scev_expand_step(
 ; VF16UF1-SAME: i64 [[X:%.*]], ptr [[DST:%.*]]) {
-; VF16UF1-NEXT:  [[ENTRY:.*:]]
+; VF16UF1-NEXT:  [[ENTRY:.*]]:
 ; VF16UF1-NEXT:    [[C:%.*]] = icmp eq i64 [[X]], 65536
 ; VF16UF1-NEXT:    call void @llvm.assume(i1 [[C]])
 ; VF16UF1-NEXT:    [[FR:%.*]] = freeze i64 [[X]]
 ; VF16UF1-NEXT:    [[STEP:%.*]] = add i64 [[FR]], -65534
-; VF16UF1-NEXT:    [[TMP0:%.*]] = udiv i64 15, [[STEP]]
-; VF16UF1-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
-; VF16UF1-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF16UF1:       [[VECTOR_PH]]:
-; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; VF16UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
-; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp ule <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT]]
-; VF16UF1-NEXT:    [[TMP4:%.*]] = extractelement <16 x i1> [[TMP3]], i64 0
-; VF16UF1-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF16UF1:       [[PRED_STORE_IF]]:
-; VF16UF1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STEP]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP8]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF16UF1:       [[PRED_STORE_CONTINUE]]:
-; VF16UF1-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP3]], i64 1
-; VF16UF1-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF16UF1:       [[PRED_STORE_IF1]]:
-; VF16UF1-NEXT:    [[TMP10:%.*]] = mul i64 1, [[STEP]]
-; VF16UF1-NEXT:    [[TMP11:%.*]] = add i64 0, [[TMP10]]
-; VF16UF1-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP12]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP13]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF16UF1:       [[PRED_STORE_CONTINUE2]]:
-; VF16UF1-NEXT:    [[TMP14:%.*]] = extractelement <16 x i1> [[TMP3]], i64 2
-; VF16UF1-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF16UF1:       [[PRED_STORE_IF3]]:
-; VF16UF1-NEXT:    [[TMP15:%.*]] = mul i64 2, [[STEP]]
-; VF16UF1-NEXT:    [[TMP16:%.*]] = add i64 0, [[TMP15]]
-; VF16UF1-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP17]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP18]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF16UF1:       [[PRED_STORE_CONTINUE4]]:
-; VF16UF1-NEXT:    [[TMP19:%.*]] = extractelement <16 x i1> [[TMP3]], i64 3
-; VF16UF1-NEXT:    br i1 [[TMP19]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF16UF1:       [[PRED_STORE_IF5]]:
-; VF16UF1-NEXT:    [[TMP20:%.*]] = mul i64 3, [[STEP]]
-; VF16UF1-NEXT:    [[TMP21:%.*]] = add i64 0, [[TMP20]]
-; VF16UF1-NEXT:    [[TMP22:%.*]] = add i64 [[TMP21]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP22]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP23]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF16UF1:       [[PRED_STORE_CONTINUE6]]:
-; VF16UF1-NEXT:    [[TMP24:%.*]] = extractelement <16 x i1> [[TMP3]], i64 4
-; VF16UF1-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF16UF1:       [[PRED_STORE_IF7]]:
-; VF16UF1-NEXT:    [[TMP25:%.*]] = mul i64 4, [[STEP]]
-; VF16UF1-NEXT:    [[TMP26:%.*]] = add i64 0, [[TMP25]]
-; VF16UF1-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP27]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP28]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF16UF1:       [[PRED_STORE_CONTINUE8]]:
-; VF16UF1-NEXT:    [[TMP29:%.*]] = extractelement <16 x i1> [[TMP3]], i64 5
-; VF16UF1-NEXT:    br i1 [[TMP29]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF16UF1:       [[PRED_STORE_IF9]]:
-; VF16UF1-NEXT:    [[TMP30:%.*]] = mul i64 5, [[STEP]]
-; VF16UF1-NEXT:    [[TMP31:%.*]] = add i64 0, [[TMP30]]
-; VF16UF1-NEXT:    [[TMP32:%.*]] = add i64 [[TMP31]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP32]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP33]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; VF16UF1:       [[PRED_STORE_CONTINUE10]]:
-; VF16UF1-NEXT:    [[TMP34:%.*]] = extractelement <16 x i1> [[TMP3]], i64 6
-; VF16UF1-NEXT:    br i1 [[TMP34]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF16UF1:       [[PRED_STORE_IF11]]:
-; VF16UF1-NEXT:    [[TMP35:%.*]] = mul i64 6, [[STEP]]
-; VF16UF1-NEXT:    [[TMP36:%.*]] = add i64 0, [[TMP35]]
-; VF16UF1-NEXT:    [[TMP37:%.*]] = add i64 [[TMP36]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP37]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP38]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; VF16UF1:       [[PRED_STORE_CONTINUE12]]:
-; VF16UF1-NEXT:    [[TMP39:%.*]] = extractelement <16 x i1> [[TMP3]], i64 7
-; VF16UF1-NEXT:    br i1 [[TMP39]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF16UF1:       [[PRED_STORE_IF13]]:
-; VF16UF1-NEXT:    [[TMP40:%.*]] = mul i64 7, [[STEP]]
-; VF16UF1-NEXT:    [[TMP41:%.*]] = add i64 0, [[TMP40]]
-; VF16UF1-NEXT:    [[TMP42:%.*]] = add i64 [[TMP41]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP42]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP43]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF16UF1:       [[PRED_STORE_CONTINUE14]]:
-; VF16UF1-NEXT:    [[TMP44:%.*]] = extractelement <16 x i1> [[TMP3]], i64 8
-; VF16UF1-NEXT:    br i1 [[TMP44]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; VF16UF1:       [[PRED_STORE_IF15]]:
-; VF16UF1-NEXT:    [[TMP45:%.*]] = mul i64 8, [[STEP]]
-; VF16UF1-NEXT:    [[TMP46:%.*]] = add i64 0, [[TMP45]]
-; VF16UF1-NEXT:    [[TMP47:%.*]] = add i64 [[TMP46]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP48:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP47]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP48]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
-; VF16UF1:       [[PRED_STORE_CONTINUE16]]:
-; VF16UF1-NEXT:    [[TMP49:%.*]] = extractelement <16 x i1> [[TMP3]], i64 9
-; VF16UF1-NEXT:    br i1 [[TMP49]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; VF16UF1:       [[PRED_STORE_IF17]]:
-; VF16UF1-NEXT:    [[TMP50:%.*]] = mul i64 9, [[STEP]]
-; VF16UF1-NEXT:    [[TMP51:%.*]] = add i64 0, [[TMP50]]
-; VF16UF1-NEXT:    [[TMP52:%.*]] = add i64 [[TMP51]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP53:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP52]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP53]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; VF16UF1:       [[PRED_STORE_CONTINUE18]]:
-; VF16UF1-NEXT:    [[TMP54:%.*]] = extractelement <16 x i1> [[TMP3]], i64 10
-; VF16UF1-NEXT:    br i1 [[TMP54]], label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; VF16UF1:       [[PRED_STORE_IF19]]:
-; VF16UF1-NEXT:    [[TMP55:%.*]] = mul i64 10, [[STEP]]
-; VF16UF1-NEXT:    [[TMP56:%.*]] = add i64 0, [[TMP55]]
-; VF16UF1-NEXT:    [[TMP57:%.*]] = add i64 [[TMP56]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP58:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP57]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP58]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; VF16UF1:       [[PRED_STORE_CONTINUE20]]:
-; VF16UF1-NEXT:    [[TMP59:%.*]] = extractelement <16 x i1> [[TMP3]], i64 11
-; VF16UF1-NEXT:    br i1 [[TMP59]], label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
-; VF16UF1:       [[PRED_STORE_IF21]]:
-; VF16UF1-NEXT:    [[TMP60:%.*]] = mul i64 11, [[STEP]]
-; VF16UF1-NEXT:    [[TMP61:%.*]] = add i64 0, [[TMP60]]
-; VF16UF1-NEXT:    [[TMP62:%.*]] = add i64 [[TMP61]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP63:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP62]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP63]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; VF16UF1:       [[PRED_STORE_CONTINUE22]]:
-; VF16UF1-NEXT:    [[TMP64:%.*]] = extractelement <16 x i1> [[TMP3]], i64 12
-; VF16UF1-NEXT:    br i1 [[TMP64]], label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
-; VF16UF1:       [[PRED_STORE_IF23]]:
-; VF16UF1-NEXT:    [[TMP65:%.*]] = mul i64 12, [[STEP]]
-; VF16UF1-NEXT:    [[TMP66:%.*]] = add i64 0, [[TMP65]]
-; VF16UF1-NEXT:    [[TMP67:%.*]] = add i64 [[TMP66]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP67]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP68]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
-; VF16UF1:       [[PRED_STORE_CONTINUE24]]:
-; VF16UF1-NEXT:    [[TMP69:%.*]] = extractelement <16 x i1> [[TMP3]], i64 13
-; VF16UF1-NEXT:    br i1 [[TMP69]], label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
-; VF16UF1:       [[PRED_STORE_IF25]]:
-; VF16UF1-NEXT:    [[TMP70:%.*]] = mul i64 13, [[STEP]]
-; VF16UF1-NEXT:    [[TMP71:%.*]] = add i64 0, [[TMP70]]
-; VF16UF1-NEXT:    [[TMP72:%.*]] = add i64 [[TMP71]], [[STEP]]
-; VF16UF1-NEXT:    [[TMP73:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP72]]
-; VF16UF1-NEXT:    store i8 0, ptr [[TMP73]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
+; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE26:.*]]
 ; VF16UF1:       [[PRED_STORE_CONTINUE26]]:
-; VF16UF1-NEXT:    [[TMP74:%.*]] = extractelement <16 x i1> [[TMP3]], i64 14
-; VF16UF1-NEXT:    br i1 [[TMP74]], label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
-; VF16UF1:       [[PRED_STORE_IF27]]:
-; VF16UF1-NEXT:    [[TMP75:%.*]] = mul i64 14, [[STEP]]
-; VF16UF1-NEXT:    [[TMP76:%.*]] = add i64 0, [[TMP75]]
-; VF16UF1-NEXT:    [[TMP77:%.*]] = add i64 [[TMP76]], [[STEP]]
+; VF16UF1-NEXT:    [[TMP76:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP77:%.*]], %[[PRED_STORE_CONTINUE26]] ]
+; VF16UF1-NEXT:    [[TMP77]] = add i64 [[TMP76]], [[STEP]]
 ; VF16UF1-NEXT:    [[TMP78:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP77]]
 ; VF16UF1-NEXT:    store i8 0, ptr [[TMP78]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
-; VF16UF1:       [[PRED_STORE_CONTINUE28]]:
-; VF16UF1-NEXT:    [[TMP79:%.*]] = extractelement <16 x i1> [[TMP3]], i64 15
-; VF16UF1-NEXT:    br i1 [[TMP79]], label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
-; VF16UF1:       [[PRED_STORE_IF29]]:
-; VF16UF1-NEXT:    [[TMP80:%.*]] = mul i64 15, [[STEP]]
-; VF16UF1-NEXT:    [[TMP81:%.*]] = add i64 0, [[TMP80]]
-; VF16UF1-NEXT:    [[TMP82:%.*]] = add i64 [[TMP81]], [[STEP]]
-; VF16UF1-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP82]]
-; VF16UF1-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
-; VF16UF1:       [[PRED_STORE_CONTINUE30]]:
-; VF16UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF16UF1:       [[MIDDLE_BLOCK]]:
-; VF16UF1-NEXT:    br label %[[EXIT:.*]]
+; VF16UF1-NEXT:    [[EC:%.*]] = icmp slt i64 [[TMP77]], 16
+; VF16UF1-NEXT:    br i1 [[EC]], label %[[PRED_STORE_CONTINUE26]], label %[[EXIT:.*]]
 ; VF16UF1:       [[EXIT]]:
 ; VF16UF1-NEXT:    ret void
 ;
@@ -1104,7 +455,7 @@ define void @test_vector_tc_eq_16(ptr %A) {
 ; VF8UF1-NEXT:    store <8 x i8> [[TMP1]], ptr [[NEXT_GEP]], align 1
 ; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF8UF1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF8UF1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
 ; VF8UF1-NEXT:    br label %[[SCALAR_PH:.*]]
 ; VF8UF1:       [[SCALAR_PH]]:
@@ -1118,7 +469,7 @@ define void @test_vector_tc_eq_16(ptr %A) {
 ; VF8UF1-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
 ; VF8UF1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; VF8UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
-; VF8UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; VF8UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF8UF1:       [[EXIT]]:
 ; VF8UF1-NEXT:    ret void
 ;
@@ -1226,228 +577,31 @@ define void @first_order_recurrence_single_vector_iteration(ptr noalias %pkt, pt
 ;
 ; VF8UF2-LABEL: define void @first_order_recurrence_single_vector_iteration(
 ; VF8UF2-SAME: ptr noalias [[PKT:%.*]], ptr noalias [[DST:%.*]]) {
-; VF8UF2-NEXT:  [[ENTRY:.*:]]
-; VF8UF2-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF8UF2:       [[VECTOR_PH]]:
+; VF8UF2-NEXT:  [[VECTOR_PH:.*]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PKT]], align 1
-; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i64 0
-; VF8UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
-; VF8UF2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> zeroinitializer, <8 x i8> [[BROADCAST_SPLAT]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
-; VF8UF2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLAT]], <8 x i8> [[BROADCAST_SPLAT]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF8UF2:       [[PRED_STORE_IF]]:
-; VF8UF2-NEXT:    [[TMP3:%.*]] = extractelement <8 x i8> [[TMP1]], i64 0
-; VF8UF2-NEXT:    store i8 [[TMP3]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF8UF2:       [[PRED_STORE_CONTINUE]]:
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF8UF2:       [[PRED_STORE_IF1]]:
-; VF8UF2-NEXT:    [[TMP4:%.*]] = extractelement <8 x i8> [[TMP1]], i64 1
-; VF8UF2-NEXT:    store i8 [[TMP4]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF8UF2:       [[PRED_STORE_CONTINUE2]]:
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF8UF2:       [[PRED_STORE_IF3]]:
-; VF8UF2-NEXT:    [[TMP5:%.*]] = extractelement <8 x i8> [[TMP1]], i64 2
-; VF8UF2-NEXT:    store i8 [[TMP5]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF8UF2:       [[PRED_STORE_CONTINUE4]]:
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF8UF2:       [[PRED_STORE_IF5]]:
-; VF8UF2-NEXT:    [[TMP6:%.*]] = extractelement <8 x i8> [[TMP1]], i64 3
-; VF8UF2-NEXT:    store i8 [[TMP6]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF8UF2:       [[PRED_STORE_CONTINUE6]]:
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF8UF2:       [[PRED_STORE_IF7]]:
-; VF8UF2-NEXT:    [[TMP7:%.*]] = extractelement <8 x i8> [[TMP1]], i64 4
-; VF8UF2-NEXT:    store i8 [[TMP7]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF8UF2:       [[PRED_STORE_CONTINUE8]]:
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF8UF2:       [[PRED_STORE_IF9]]:
-; VF8UF2-NEXT:    [[TMP8:%.*]] = extractelement <8 x i8> [[TMP1]], i64 5
-; VF8UF2-NEXT:    store i8 [[TMP8]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; VF8UF2:       [[PRED_STORE_CONTINUE10]]:
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF8UF2:       [[PRED_STORE_IF11]]:
-; VF8UF2-NEXT:    [[TMP9:%.*]] = extractelement <8 x i8> [[TMP1]], i64 6
-; VF8UF2-NEXT:    store i8 [[TMP9]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; VF8UF2:       [[PRED_STORE_CONTINUE12]]:
-; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF8UF2:       [[PRED_STORE_IF13]]:
-; VF8UF2-NEXT:    [[TMP10:%.*]] = extractelement <8 x i8> [[TMP1]], i64 7
-; VF8UF2-NEXT:    store i8 [[TMP10]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF8UF2:       [[PRED_STORE_CONTINUE14]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; VF8UF2:       [[PRED_STORE_IF15]]:
-; VF8UF2-NEXT:    [[TMP11:%.*]] = extractelement <8 x i8> [[TMP2]], i64 0
-; VF8UF2-NEXT:    store i8 [[TMP11]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
-; VF8UF2:       [[PRED_STORE_CONTINUE16]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; VF8UF2:       [[PRED_STORE_IF17]]:
-; VF8UF2-NEXT:    [[TMP12:%.*]] = extractelement <8 x i8> [[TMP2]], i64 1
-; VF8UF2-NEXT:    store i8 [[TMP12]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; VF8UF2:       [[PRED_STORE_CONTINUE18]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; VF8UF2:       [[PRED_STORE_IF19]]:
-; VF8UF2-NEXT:    [[TMP13:%.*]] = extractelement <8 x i8> [[TMP2]], i64 2
-; VF8UF2-NEXT:    store i8 [[TMP13]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; VF8UF2:       [[PRED_STORE_CONTINUE20]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
-; VF8UF2:       [[PRED_STORE_IF21]]:
-; VF8UF2-NEXT:    [[TMP14:%.*]] = extractelement <8 x i8> [[TMP2]], i64 3
-; VF8UF2-NEXT:    store i8 [[TMP14]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; VF8UF2:       [[PRED_STORE_CONTINUE22]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
-; VF8UF2:       [[PRED_STORE_IF23]]:
-; VF8UF2-NEXT:    [[TMP15:%.*]] = extractelement <8 x i8> [[TMP2]], i64 4
-; VF8UF2-NEXT:    store i8 [[TMP15]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
-; VF8UF2:       [[PRED_STORE_CONTINUE24]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
-; VF8UF2:       [[PRED_STORE_IF25]]:
-; VF8UF2-NEXT:    [[TMP16:%.*]] = extractelement <8 x i8> [[TMP2]], i64 5
-; VF8UF2-NEXT:    store i8 [[TMP16]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
-; VF8UF2:       [[PRED_STORE_CONTINUE26]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
-; VF8UF2:       [[PRED_STORE_IF27]]:
-; VF8UF2-NEXT:    [[TMP17:%.*]] = extractelement <8 x i8> [[TMP2]], i64 6
-; VF8UF2-NEXT:    store i8 [[TMP17]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
-; VF8UF2:       [[PRED_STORE_CONTINUE28]]:
-; VF8UF2-NEXT:    br i1 false, label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
-; VF8UF2:       [[PRED_STORE_IF29]]:
-; VF8UF2-NEXT:    [[TMP18:%.*]] = extractelement <8 x i8> [[TMP2]], i64 7
+; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF8UF2-NEXT:    [[TMP18:%.*]] = phi i8 [ 0, %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
+; VF8UF2-NEXT:    [[TMP0]] = load i8, ptr [[PKT]], align 1
 ; VF8UF2-NEXT:    store i8 [[TMP18]], ptr [[DST]], align 1
-; VF8UF2-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
-; VF8UF2:       [[PRED_STORE_CONTINUE30]]:
-; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF8UF2:       [[MIDDLE_BLOCK]]:
-; VF8UF2-NEXT:    br label %[[EXIT:.*]]
+; VF8UF2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VF8UF2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 7
+; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
 ; VF8UF2:       [[EXIT]]:
 ; VF8UF2-NEXT:    ret void
 ;
 ; VF16UF1-LABEL: define void @first_order_recurrence_single_vector_iteration(
 ; VF16UF1-SAME: ptr noalias [[PKT:%.*]], ptr noalias [[DST:%.*]]) {
-; VF16UF1-NEXT:  [[ENTRY:.*:]]
-; VF16UF1-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF16UF1:       [[VECTOR_PH]]:
+; VF16UF1-NEXT:  [[VECTOR_PH:.*]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PKT]], align 1
-; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i64 0
-; VF16UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
-; VF16UF1-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> zeroinitializer, <16 x i8> [[BROADCAST_SPLAT]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF16UF1:       [[PRED_STORE_IF]]:
-; VF16UF1-NEXT:    [[TMP2:%.*]] = extractelement <16 x i8> [[TMP1]], i64 0
-; VF16UF1-NEXT:    store i8 [[TMP2]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF16UF1:       [[PRED_STORE_CONTINUE]]:
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF16UF1:       [[PRED_STORE_IF1]]:
-; VF16UF1-NEXT:    [[TMP3:%.*]] = extractelement <16 x i8> [[TMP1]], i64 1
-; VF16UF1-NEXT:    store i8 [[TMP3]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF16UF1:       [[PRED_STORE_CONTINUE2]]:
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF16UF1:       [[PRED_STORE_IF3]]:
-; VF16UF1-NEXT:    [[TMP4:%.*]] = extractelement <16 x i8> [[TMP1]], i64 2
-; VF16UF1-NEXT:    store i8 [[TMP4]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF16UF1:       [[PRED_STORE_CONTINUE4]]:
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF16UF1:       [[PRED_STORE_IF5]]:
-; VF16UF1-NEXT:    [[TMP5:%.*]] = extractelement <16 x i8> [[TMP1]], i64 3
-; VF16UF1-NEXT:    store i8 [[TMP5]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF16UF1:       [[PRED_STORE_CONTINUE6]]:
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; VF16UF1:       [[PRED_STORE_IF7]]:
-; VF16UF1-NEXT:    [[TMP6:%.*]] = extractelement <16 x i8> [[TMP1]], i64 4
-; VF16UF1-NEXT:    store i8 [[TMP6]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; VF16UF1:       [[PRED_STORE_CONTINUE8]]:
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; VF16UF1:       [[PRED_STORE_IF9]]:
-; VF16UF1-NEXT:    [[TMP7:%.*]] = extractelement <16 x i8> [[TMP1]], i64 5
-; VF16UF1-NEXT:    store i8 [[TMP7]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; VF16UF1:       [[PRED_STORE_CONTINUE10]]:
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; VF16UF1:       [[PRED_STORE_IF11]]:
-; VF16UF1-NEXT:    [[TMP8:%.*]] = extractelement <16 x i8> [[TMP1]], i64 6
-; VF16UF1-NEXT:    store i8 [[TMP8]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; VF16UF1:       [[PRED_STORE_CONTINUE12]]:
-; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; VF16UF1:       [[PRED_STORE_IF13]]:
-; VF16UF1-NEXT:    [[TMP9:%.*]] = extractelement <16 x i8> [[TMP1]], i64 7
-; VF16UF1-NEXT:    store i8 [[TMP9]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; VF16UF1:       [[PRED_STORE_CONTINUE14]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; VF16UF1:       [[PRED_STORE_IF15]]:
-; VF16UF1-NEXT:    [[TMP10:%.*]] = extractelement <16 x i8> [[TMP1]], i64 8
-; VF16UF1-NEXT:    store i8 [[TMP10]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
-; VF16UF1:       [[PRED_STORE_CONTINUE16]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; VF16UF1:       [[PRED_STORE_IF17]]:
-; VF16UF1-NEXT:    [[TMP11:%.*]] = extractelement <16 x i8> [[TMP1]], i64 9
-; VF16UF1-NEXT:    store i8 [[TMP11]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; VF16UF1:       [[PRED_STORE_CONTINUE18]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; VF16UF1:       [[PRED_STORE_IF19]]:
-; VF16UF1-NEXT:    [[TMP12:%.*]] = extractelement <16 x i8> [[TMP1]], i64 10
-; VF16UF1-NEXT:    store i8 [[TMP12]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; VF16UF1:       [[PRED_STORE_CONTINUE20]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
-; VF16UF1:       [[PRED_STORE_IF21]]:
-; VF16UF1-NEXT:    [[TMP13:%.*]] = extractelement <16 x i8> [[TMP1]], i64 11
-; VF16UF1-NEXT:    store i8 [[TMP13]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; VF16UF1:       [[PRED_STORE_CONTINUE22]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
-; VF16UF1:       [[PRED_STORE_IF23]]:
-; VF16UF1-NEXT:    [[TMP14:%.*]] = extractelement <16 x i8> [[TMP1]], i64 12
-; VF16UF1-NEXT:    store i8 [[TMP14]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
-; VF16UF1:       [[PRED_STORE_CONTINUE24]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
-; VF16UF1:       [[PRED_STORE_IF25]]:
-; VF16UF1-NEXT:    [[TMP15:%.*]] = extractelement <16 x i8> [[TMP1]], i64 13
-; VF16UF1-NEXT:    store i8 [[TMP15]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
-; VF16UF1:       [[PRED_STORE_CONTINUE26]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
-; VF16UF1:       [[PRED_STORE_IF27]]:
-; VF16UF1-NEXT:    [[TMP16:%.*]] = extractelement <16 x i8> [[TMP1]], i64 14
-; VF16UF1-NEXT:    store i8 [[TMP16]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
-; VF16UF1:       [[PRED_STORE_CONTINUE28]]:
-; VF16UF1-NEXT:    br i1 false, label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
-; VF16UF1:       [[PRED_STORE_IF29]]:
-; VF16UF1-NEXT:    [[TMP17:%.*]] = extractelement <16 x i8> [[TMP1]], i64 15
+; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF16UF1-NEXT:    [[TMP17:%.*]] = phi i8 [ 0, %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
+; VF16UF1-NEXT:    [[TMP0]] = load i8, ptr [[PKT]], align 1
 ; VF16UF1-NEXT:    store i8 [[TMP17]], ptr [[DST]], align 1
-; VF16UF1-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
-; VF16UF1:       [[PRED_STORE_CONTINUE30]]:
-; VF16UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; VF16UF1:       [[MIDDLE_BLOCK]]:
-; VF16UF1-NEXT:    br label %[[EXIT:.*]]
+; VF16UF1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VF16UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 7
+; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
 ; VF16UF1:       [[EXIT]]:
 ; VF16UF1-NEXT:    ret void
 ;
@@ -1474,8 +628,9 @@ exit:
 ; VF8UF1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; VF8UF1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; VF8UF1: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; VF8UF1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; VF8UF1: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
+; VF8UF1: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
+; VF8UF1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
+; VF8UF1: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
 ;.
 ; VF8UF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF8UF2: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}

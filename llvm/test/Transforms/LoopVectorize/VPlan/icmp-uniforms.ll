@@ -69,11 +69,75 @@ define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK-NEXT:    IR   %tmp3 = add i32 %r, %tmp2
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
+; CHECK-EMPTY:
+; CHECK-NEXT:  ; *** IR Dump After InstCombinePass on more_than_one_use ***
+; CHECK-NEXT:  define i32 @more_than_one_use(ptr %a, i64 %n) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %smax = call i64 @llvm.smax.i64(i64 %n, i64 1)
+; CHECK-NEXT:    %min.iters.check = icmp slt i64 %n, 4
+; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:                                        ; preds = %entry
+; CHECK-NEXT:    %n.vec = and i64 %smax, 9223372036854775804
+; CHECK-NEXT:    %broadcast.splatinsert = insertelement <4 x i64> poison, i64 %n, i64 0
+; CHECK-NEXT:    %broadcast.splat = shufflevector <4 x i64> %broadcast.splatinsert, <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:                                      ; preds = %vector.body, %vector.ph
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK-NEXT:    %vec.ind = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK-NEXT:    %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %18, %vector.body ]
+; CHECK-NEXT:    %0 = add nuw nsw <4 x i64> %vec.ind, splat (i64 1)
+; CHECK-NEXT:    %.not = icmp slt <4 x i64> %0, %broadcast.splat
+; CHECK-NEXT:    %1 = select <4 x i1> %.not, <4 x i64> %0, <4 x i64> zeroinitializer
+; CHECK-NEXT:    %2 = extractelement <4 x i64> %1, i64 0
+; CHECK-NEXT:    %3 = extractelement <4 x i64> %1, i64 1
+; CHECK-NEXT:    %4 = extractelement <4 x i64> %1, i64 2
+; CHECK-NEXT:    %5 = extractelement <4 x i64> %1, i64 3
+; CHECK-NEXT:    %6 = getelementptr inbounds nuw [4 x i8], ptr %a, i64 %2
+; CHECK-NEXT:    %7 = getelementptr inbounds nuw [4 x i8], ptr %a, i64 %3
+; CHECK-NEXT:    %8 = getelementptr inbounds nuw [4 x i8], ptr %a, i64 %4
+; CHECK-NEXT:    %9 = getelementptr inbounds nuw [4 x i8], ptr %a, i64 %5
+; CHECK-NEXT:    %10 = load i32, ptr %6, align 8
+; CHECK-NEXT:    %11 = load i32, ptr %7, align 8
+; CHECK-NEXT:    %12 = load i32, ptr %8, align 8
+; CHECK-NEXT:    %13 = load i32, ptr %9, align 8
+; CHECK-NEXT:    %14 = insertelement <4 x i32> poison, i32 %10, i64 0
+; CHECK-NEXT:    %15 = insertelement <4 x i32> %14, i32 %11, i64 1
+; CHECK-NEXT:    %16 = insertelement <4 x i32> %15, i32 %12, i64 2
+; CHECK-NEXT:    %17 = insertelement <4 x i32> %16, i32 %13, i64 3
+; CHECK-NEXT:    %18 = add <4 x i32> %vec.phi, %17
+; CHECK-NEXT:    %index.next = add nuw i64 %index, 4
+; CHECK-NEXT:    %vec.ind.next = add nuw nsw <4 x i64> %vec.ind, splat (i64 4)
+; CHECK-NEXT:    %19 = icmp eq i64 %index.next, %n.vec
+; CHECK-NEXT:    br i1 %19, label %middle.block, label %vector.body, !llvm.loop !0
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:                                     ; preds = %vector.body
+; CHECK-NEXT:    %20 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %18)
+; CHECK-NEXT:    %cmp.n = icmp eq i64 %smax, %n.vec
+; CHECK-NEXT:    br i1 %cmp.n, label %for.end, label %scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:                                        ; preds = %entry, %middle.block
+; CHECK-NEXT:    %bc.resume.val = phi i64 [ %n.vec, %middle.block ], [ 0, %entry ]
+; CHECK-NEXT:    %bc.merge.rdx = phi i32 [ %20, %middle.block ], [ 0, %entry ]
+; CHECK-NEXT:    br label %for.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  for.body:                                         ; preds = %scalar.ph, %for.body
+; CHECK-NEXT:    %i = phi i64 [ %i.next, %for.body ], [ %bc.resume.val, %scalar.ph ]
+; CHECK-NEXT:    %r = phi i32 [ %tmp3, %for.body ], [ %bc.merge.rdx, %scalar.ph ]
+; CHECK-NEXT:    %i.next = add nuw nsw i64 %i, 1
+; CHECK-NEXT:    %cond = icmp slt i64 %i.next, %n
+; CHECK-NEXT:    %tmp0 = select i1 %cond, i64 %i.next, i64 0
+; CHECK-NEXT:    %tmp1 = getelementptr inbounds nuw [4 x i8], ptr %a, i64 %tmp0
+; CHECK-NEXT:    %tmp2 = load i32, ptr %tmp1, align 8
+; CHECK-NEXT:    %tmp3 = add i32 %r, %tmp2
+; CHECK-NEXT:    br i1 %cond, label %for.body, label %for.end, !llvm.loop !3
+; CHECK-EMPTY:
+; CHECK-NEXT:  for.end:                                          ; preds = %middle.block, %for.body
+; CHECK-NEXT:    %tmp4 = phi i32 [ %tmp3, %for.body ], [ %20, %middle.block ]
+; CHECK-NEXT:    ret i32 %tmp4
+; CHECK-NEXT:  }
 ;
-; CHECK:     vector.body
-; CHECK:       %[[I:.+]] = add nuw nsw <4 x i64> %vec.ind, splat (i64 1)
-; CHECK:       icmp slt <4 x i64> %[[I]], %broadcast.splat
-; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 entry:
   br label %for.body
 
@@ -95,12 +159,11 @@ for.end:
 
 ; Check for crash exposed by D76992.
 define void @test(ptr %ptr) {
-; CHECK-LABEL: 'test'
+; CHECK-LABEL: VPlan for loop in 'test'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
 ; CHECK-NEXT:  Live-in ir<14> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -110,49 +173,36 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
 ; CHECK-NEXT:      WIDEN ir<%s> = select ir<%cond0>, ir<10>, ir<20>
-; CHECK-NEXT:    Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:    <xVFxUF> pred.store: {
-; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP5]]>
-; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP6]]>
-; CHECK-NEXT:        REPLICATE store ir<%s>, ir<%gep>
-; CHECK-NEXT:      Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.continue:
-; CHECK-NEXT:      No successors
-; CHECK-NEXT:    }
-; CHECK-NEXT:    Successor(s): loop.0
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.0:
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%s>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:  Successor(s): ir-bb<exit>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<14>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %cond0 = icmp ult i64 %iv, 13
 ; CHECK-NEXT:    IR   %s = select i1 %cond0, i32 10, i32 20
 ; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %ptr, i64 %iv
@@ -160,6 +210,46 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    IR   %exitcond = icmp eq i64 %iv.next, 14
 ; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+; CHECK-EMPTY:
+; CHECK-NEXT:  ; *** IR Dump After InstCombinePass on test ***
+; CHECK-NEXT:  define void @test(ptr %ptr) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label %vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:                                        ; preds = %entry
+; CHECK-NEXT:    br label %vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:                                      ; preds = %vector.body, %vector.ph
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK-NEXT:    %vec.ind = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK-NEXT:    %0 = icmp samesign ult <4 x i64> %vec.ind, splat (i64 13)
+; CHECK-NEXT:    %1 = select <4 x i1> %0, <4 x i32> splat (i32 10), <4 x i32> splat (i32 20)
+; CHECK-NEXT:    %2 = getelementptr inbounds [4 x i8], ptr %ptr, i64 %index
+; CHECK-NEXT:    store <4 x i32> %1, ptr %2, align 4
+; CHECK-NEXT:    %index.next = add nuw i64 %index, 4
+; CHECK-NEXT:    %vec.ind.next = add nuw nsw <4 x i64> %vec.ind, splat (i64 4)
+; CHECK-NEXT:    %3 = icmp eq i64 %index.next, 12
+; CHECK-NEXT:    br i1 %3, label %middle.block, label %vector.body, !llvm.loop !4
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:                                     ; preds = %vector.body
+; CHECK-NEXT:    br label %scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:                                        ; preds = %middle.block
+; CHECK-NEXT:    br label %loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  loop:                                             ; preds = %scalar.ph, %loop
+; CHECK-NEXT:    %iv = phi i64 [ 12, %scalar.ph ], [ %iv.next, %loop ]
+; CHECK-NEXT:    %cond0 = icmp samesign ult i64 %iv, 13
+; CHECK-NEXT:    %s = select i1 %cond0, i32 10, i32 20
+; CHECK-NEXT:    %gep = getelementptr inbounds nuw [4 x i8], ptr %ptr, i64 %iv
+; CHECK-NEXT:    store i32 %s, ptr %gep, align 4
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    %exitcond = icmp eq i64 %iv.next, 14
+; CHECK-NEXT:    br i1 %exitcond, label %exit, label %loop, !llvm.loop !5
+; CHECK-EMPTY:
+; CHECK-NEXT:  exit:                                             ; preds = %loop
+; CHECK-NEXT:    ret void
 ; CHECK-NEXT:  }
 ;
 entry:

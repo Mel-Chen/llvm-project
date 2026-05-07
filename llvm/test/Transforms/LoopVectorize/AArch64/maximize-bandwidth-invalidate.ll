@@ -7,14 +7,9 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
 
 ; Check that the maximize vector bandwidth option does not give incorrect costs
-; due to invalid cost decisions. The loop below has a low maximum trip count,
-; so will be masked.
+; due to invalid cost decisions. The loop below has a low maximum trip count.
 
-; COST: Cost of 3000000 for VF 2: REPLICATE ir<%0> = load
-; COST: Cost of 3000000 for VF 4: REPLICATE ir<%0> = load
-; COST: Cost of 3000000 for VF 8: REPLICATE ir<%0> = load
-; COST: Cost of 3000000 for VF 16: REPLICATE ir<%0> = load
-; COST: LV: Selecting VF: 1.
+; COST: LV: Selecting VF: 2.
 
 define i32 @test(ptr nocapture noundef readonly %pInVec, ptr nocapture noundef readonly %pInA1, ptr nocapture noundef readonly %pInA2, ptr nocapture noundef readonly %pInA3, ptr nocapture noundef readonly %pInA4, i32 noundef %numCols) {
 ; CHECK-LABEL: @test(
@@ -23,18 +18,83 @@ define i32 @test(ptr nocapture noundef readonly %pInVec, ptr nocapture noundef r
 ; CHECK-NEXT:    [[CMP_NOT32:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT32]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
+; CHECK-NEXT:    [[TMP27:%.*]] = trunc i32 [[NUMCOLS]] to i2
+; CHECK-NEXT:    [[TMP28:%.*]] = zext i2 [[TMP27]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP28]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP28]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP28]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[PINVEC:%.*]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP30:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[TMP31:%.*]] = sub i32 [[AND]], [[TMP30]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[PINA1:%.*]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[PINA4:%.*]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[PINA3:%.*]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[PINA2:%.*]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PINVEC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PINA1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[PINA4]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[PINA3]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[PINA2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i8> [[WIDE_LOAD]] to <2 x i32>
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x i8>, ptr [[NEXT_GEP4]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <2 x i8> [[WIDE_LOAD8]] to <2 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nsw <2 x i32> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12]] = add <2 x i32> [[TMP11]], [[VEC_PHI3]]
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i8>, ptr [[NEXT_GEP7]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = sext <2 x i8> [[WIDE_LOAD9]] to <2 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = mul nsw <2 x i32> [[TMP13]], [[TMP9]]
+; CHECK-NEXT:    [[TMP15]] = add <2 x i32> [[TMP14]], [[VEC_PHI2]]
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x i8>, ptr [[NEXT_GEP6]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = sext <2 x i8> [[WIDE_LOAD10]] to <2 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = mul nsw <2 x i32> [[TMP16]], [[TMP9]]
+; CHECK-NEXT:    [[TMP18]] = add <2 x i32> [[TMP17]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <2 x i8>, ptr [[NEXT_GEP5]], align 1
+; CHECK-NEXT:    [[TMP19:%.*]] = sext <2 x i8> [[WIDE_LOAD11]] to <2 x i32>
+; CHECK-NEXT:    [[TMP20:%.*]] = mul nsw <2 x i32> [[TMP19]], [[TMP9]]
+; CHECK-NEXT:    [[TMP21]] = add <2 x i32> [[TMP20]], [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[WHILE_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP21]])
+; CHECK-NEXT:    [[TMP24:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP18]])
+; CHECK-NEXT:    [[TMP25:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP15]])
+; CHECK-NEXT:    [[TMP26:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP12]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP29]], [[MIDDLE_BLOCK]] ], [ [[PINVEC]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP23]], [[MIDDLE_BLOCK]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX12:%.*]] = phi i32 [ [[TMP24]], [[MIDDLE_BLOCK]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP25]], [[MIDDLE_BLOCK]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX14:%.*]] = phi i32 [ [[TMP26]], [[MIDDLE_BLOCK]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi i32 [ [[TMP31]], [[MIDDLE_BLOCK]] ], [ [[AND]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[TMP32]], [[MIDDLE_BLOCK]] ], [ [[PINA1]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi ptr [ [[TMP33]], [[MIDDLE_BLOCK]] ], [ [[PINA4]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi ptr [ [[TMP34]], [[MIDDLE_BLOCK]] ], [ [[PINA3]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL19:%.*]] = phi ptr [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ [[PINA2]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br label [[WHILE_BODY1:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[PINVEC_ADDR_042:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[PINVEC:%.*]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[SUM4_041:%.*]] = phi i32 [ [[ADD14:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[SUM3_040:%.*]] = phi i32 [ [[ADD10:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[SUM2_039:%.*]] = phi i32 [ [[ADD6:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[SUM1_038:%.*]] = phi i32 [ [[ADD:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[COLCNT_037:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[AND]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[PINA1_ADDR_036:%.*]] = phi ptr [ [[INCDEC_PTR1:%.*]], [[WHILE_BODY]] ], [ [[PINA1:%.*]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[PINA4_ADDR_035:%.*]] = phi ptr [ [[INCDEC_PTR11:%.*]], [[WHILE_BODY]] ], [ [[PINA4:%.*]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[PINA3_ADDR_034:%.*]] = phi ptr [ [[INCDEC_PTR7:%.*]], [[WHILE_BODY]] ], [ [[PINA3:%.*]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[PINA2_ADDR_033:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[PINA2:%.*]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[PINVEC_ADDR_042:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY1]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM4_041:%.*]] = phi i32 [ [[ADD14:%.*]], [[WHILE_BODY1]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM3_040:%.*]] = phi i32 [ [[ADD10:%.*]], [[WHILE_BODY1]] ], [ [[BC_MERGE_RDX12]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM2_039:%.*]] = phi i32 [ [[ADD6:%.*]], [[WHILE_BODY1]] ], [ [[BC_MERGE_RDX13]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM1_038:%.*]] = phi i32 [ [[ADD:%.*]], [[WHILE_BODY1]] ], [ [[BC_MERGE_RDX14]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[COLCNT_037:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY1]] ], [ [[BC_RESUME_VAL15]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PINA1_ADDR_036:%.*]] = phi ptr [ [[INCDEC_PTR1:%.*]], [[WHILE_BODY1]] ], [ [[BC_RESUME_VAL16]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PINA4_ADDR_035:%.*]] = phi ptr [ [[INCDEC_PTR11:%.*]], [[WHILE_BODY1]] ], [ [[BC_RESUME_VAL17]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PINA3_ADDR_034:%.*]] = phi ptr [ [[INCDEC_PTR7:%.*]], [[WHILE_BODY1]] ], [ [[BC_RESUME_VAL18]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PINA2_ADDR_033:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY1]] ], [ [[BC_RESUME_VAL19]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PINVEC_ADDR_042]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PINVEC_ADDR_042]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP0]] to i32
@@ -60,12 +120,12 @@ define i32 @test(ptr nocapture noundef readonly %pInVec, ptr nocapture noundef r
 ; CHECK-NEXT:    [[ADD14]] = add nsw i32 [[MUL13]], [[SUM4_041]]
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[COLCNT_037]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT]], label [[WHILE_BODY1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       while.end.loopexit:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[ADD6_LCSSA:%.*]] = phi i32 [ [[ADD6]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[ADD10_LCSSA:%.*]] = phi i32 [ [[ADD10]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[ADD14_LCSSA:%.*]] = phi i32 [ [[ADD14]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[WHILE_BODY1]] ], [ [[TMP26]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ADD6_LCSSA:%.*]] = phi i32 [ [[ADD6]], [[WHILE_BODY1]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ADD10_LCSSA:%.*]] = phi i32 [ [[ADD10]], [[WHILE_BODY1]] ], [ [[TMP24]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ADD14_LCSSA:%.*]] = phi i32 [ [[ADD14]], [[WHILE_BODY1]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[ADD6_LCSSA]], [[ADD_LCSSA]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP5]], [[ADD10_LCSSA]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i32 [[TMP6]], [[ADD14_LCSSA]]
@@ -127,3 +187,5 @@ while.end:
   %add17 = phi i32 [ %7, %while.end.loopexit ], [ 0, %entry ]
   ret i32 %add17
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; COST: {{.*}}

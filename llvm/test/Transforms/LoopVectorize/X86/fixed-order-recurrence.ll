@@ -435,15 +435,37 @@ define void @test_first_order_recurrence_tried_to_scalarized(ptr %dst, i1 %c, i3
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = select i1 [[C:%.*]], i32 8, i32 9
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY1]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY1]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 4>, [[VECTOR_BODY]] ], [ [[VEC_IND]], [[VECTOR_BODY1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <4 x i32> splat (i32 10), [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY1]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[VEC_IND]], i64 3
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ 4, [[ENTRY]] ], [ [[TMP18]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ [[N_VEC]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[SCALAR_PH]] ], [ [[TMP18]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[TMP18]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = sub nsw i32 10, [[TMP15]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i32 [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i32 [[TMP18]]
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

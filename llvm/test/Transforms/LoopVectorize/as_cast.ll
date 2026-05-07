@@ -7,33 +7,32 @@ define void @loop_invariant_as_cast(ptr addrspace(1) %in) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[IN]] to ptr
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP0]], 6
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[IN]] to ptr
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 [[TMP9]]
 ; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP5]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
+; CHECK-NEXT:    br label %[[PRED_STORE_IF1:.*]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 1
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP6:%.*]], %[[PRED_STORE_IF1]] ], [ 6, %[[PRED_STORE_CONTINUE]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast ptr addrspace(1) [[IN]] to ptr
+; CHECK-NEXT:    [[TMP6]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 [[TMP6]]
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[TMP8]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP6]], 7
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[PRED_STORE_IF1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -61,31 +60,31 @@ define void @loop_varying_as_cast(ptr addrspace(1) %in) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP0]], 6
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[IN]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[IN]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[TMP4]] to ptr
+; CHECK-NEXT:    [[TMP10:%.*]] = addrspacecast ptr addrspace(1) [[TMP9]] to ptr
 ; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP5]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK-NEXT:    store i64 [[TMP2]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
+; CHECK-NEXT:    br label %[[PRED_STORE_IF1:.*]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 1
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP6:%.*]], %[[PRED_STORE_IF1]] ], [ 6, %[[PRED_STORE_CONTINUE]] ]
+; CHECK-NEXT:    [[TMP6]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[IN]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = addrspacecast ptr addrspace(1) [[TMP7]] to ptr
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[TMP8]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP6]], 7
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[PRED_STORE_IF1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

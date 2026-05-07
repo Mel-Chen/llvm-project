@@ -380,16 +380,38 @@ define void @sdiv_power_of_2_divisor_in_replicate_region(i32 %x, ptr %dst, i64 %
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i64 [[N]], 9
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sdiv i32 99, [[X]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> [[BROADCAST_SPLAT]], splat (i32 2)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 99, [[X]]
 ; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[DIV]], 2
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[DIV2]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -485,9 +507,9 @@ define void @getPredBlockCostDivisor_truncate(i32 %0, i1 %c1, i1 %c2, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       [[IF_1]]:
-; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF15]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF17]]
 ; CHECK:       [[IF_2]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
@@ -541,5 +563,7 @@ exit:
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META10]]}
-; CHECK: [[PROF15]] = !{!"branch_weights", i32 0, i32 1}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]]}
+; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META11]], [[META10]]}
+; CHECK: [[PROF17]] = !{!"branch_weights", i32 0, i32 1}
 ;.

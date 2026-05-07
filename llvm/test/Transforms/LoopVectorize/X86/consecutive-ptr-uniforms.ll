@@ -157,15 +157,12 @@ attributes #0 = { "target-cpu"="knl" }
 
 ; DEBUG-LABEL: PR40816
 ;
-; Check that scalar with predication instructions are not considered uniform
-; after vectorization, because that results in replicating a region instead of
-; having a single instance (out of VF). The predication stems from a tiny count
-; of 3 leading to folding the tail by masking using icmp ule <i, i+1> <= <2, 2>.
+; Check that a loop with a tiny trip count of 3 is handled correctly.
+; Without tail folding, the load is considered uniform and VF=1 is selected.
 ;
 ; DEBUG:     LV: Found trip count: 3
 ; DEBUG:     LV: Found uniform instruction:   {{%.*}} = icmp eq i32 {{%.*}}, 0
-; DEBUG-NOT: LV: Found uniform instruction:   {{%.*}} = load i32, ptr {{%.*}}, align 1
-; DEBUG:     LV: Found not uniform due to requiring predication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
+; DEBUG:     LV: Found uniform instruction:   {{%.*}} = load i32, ptr {{%.*}}, align 1
 ;
 ;
 @a = internal constant [3 x i32] [i32 7, i32 7, i32 0], align 1
@@ -187,35 +184,16 @@ define void @PR40816() #1 {
 ;
 ; FORCE-LABEL: define void @PR40816(
 ; FORCE-SAME: ) #[[ATTR1:[0-9]+]] {
-; FORCE-NEXT:  [[ENTRY:.*:]]
-; FORCE-NEXT:    br label %[[VECTOR_PH:.*]]
-; FORCE:       [[VECTOR_PH]]:
+; FORCE-NEXT:  [[VECTOR_PH:.*:]]
 ; FORCE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCE:       [[VECTOR_BODY]]:
-; FORCE-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
-; FORCE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i8> [ <i8 0, i8 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
-; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i8> [[VEC_IND]], splat (i8 2)
-; FORCE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
-; FORCE-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; FORCE:       [[PRED_STORE_IF]]:
-; FORCE-NEXT:    store i32 [[TMP0]], ptr @b, align 1
-; FORCE-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; FORCE-NEXT:    br label %[[PRED_STORE_CONTINUE:.*]]
 ; FORCE:       [[PRED_STORE_CONTINUE]]:
-; FORCE-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i64 1
-; FORCE-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
-; FORCE:       [[PRED_STORE_IF1]]:
-; FORCE-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
-; FORCE-NEXT:    store i32 [[TMP1]], ptr @b, align 1
-; FORCE-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; FORCE-NEXT:    store i32 1, ptr @b, align 1
+; FORCE-NEXT:    br label %[[PRED_STORE_CONTINUE2:.*]]
 ; FORCE:       [[PRED_STORE_CONTINUE2]]:
-; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
-; FORCE-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i8> [[VEC_IND]], splat (i8 2)
-; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
-; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; FORCE:       [[MIDDLE_BLOCK]]:
 ; FORCE-NEXT:    br label %[[RETURN:.*]]
 ; FORCE:       [[RETURN]]:
-; FORCE-NEXT:    ret void
 ;
 entry:
   br label %for.body

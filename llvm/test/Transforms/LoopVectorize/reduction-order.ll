@@ -16,21 +16,29 @@ define i32 @foo() !prof !1 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI_1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[ADD_5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI_2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[ADD_3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ADD_3]] = add <4 x i32> splat (i32 3), [[VEC_PHI_2]]
 ; CHECK-NEXT:    [[ADD_5]] = add <4 x i32> [[VEC_PHI_1]], splat (i32 5)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 9)
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[ADD_5]], <4 x i32> [[VEC_PHI_1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[ADD_3]], <4 x i32> [[VEC_PHI_2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ADD_5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ADD_3]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 8, %[[EXIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED_1:%.*]] = phi i32 [ [[TMP3]], %[[EXIT]] ], [ [[RED_1_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED_2:%.*]] = phi i32 [ [[TMP4]], %[[EXIT]] ], [ [[RED_2_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED_2_NEXT]] = add i32 3, [[RED_2]]
+; CHECK-NEXT:    [[RED_1_NEXT]] = add i32 [[RED_1]], 5
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT1:.*]], label %[[LOOP]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[RED_2_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i32 [ [[RED_1_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;

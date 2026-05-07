@@ -85,39 +85,20 @@ define void @test3(ptr %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD41:%.*]] = add i32 3, 3
 ; CHECK-NEXT:    [[IDXPROM4736:%.*]] = zext i32 [[ADD41]] to i64
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P:%.*]], i64 0, i64 6
-; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX48]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; CHECK:       pred.store.continue:
-; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
-; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P]], i64 0, i64 7
-; CHECK-NEXT:    store i8 0, ptr [[TMP15]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P]], i64 0, i64 8
-; CHECK-NEXT:    store i8 0, ptr [[TMP17]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
-; CHECK:       pred.store.if5:
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P]], i64 0, i64 9
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE5:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[IDXPROM4738:%.*]] = phi i64 [ [[IDXPROM47:%.*]], [[PRED_STORE_CONTINUE5]] ], [ [[IDXPROM4736]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[POS_337:%.*]] = phi i32 [ [[INC46:%.*]], [[PRED_STORE_CONTINUE5]] ], [ [[ADD41]], [[ENTRY]] ]
+; CHECK-NEXT:    [[INC46]] = add i32 [[POS_337]], 1
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P:%.*]], i64 0, i64 [[IDXPROM4738]]
 ; CHECK-NEXT:    store i8 0, ptr [[TMP19]], align 1
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; CHECK:       pred.store.continue6:
-; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[WHILE_END:%.*]]
+; CHECK-NEXT:    [[AND43:%.*]] = and i32 [[INC46]], 3
+; CHECK-NEXT:    [[CMP44:%.*]] = icmp eq i32 [[AND43]], 0
+; CHECK-NEXT:    [[IDXPROM47]] = zext i32 [[INC46]] to i64
+; CHECK-NEXT:    br i1 [[CMP44]], label [[WHILE_END:%.*]], label [[PRED_STORE_CONTINUE5]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[ADD58:%.*]] = add i32 8, 4
+; CHECK-NEXT:    [[INC46_LCSSA:%.*]] = phi i32 [ [[INC46]], [[PRED_STORE_CONTINUE5]] ]
+; CHECK-NEXT:    [[ADD58:%.*]] = add i32 [[INC46_LCSSA]], 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -195,38 +176,18 @@ bb:
 define i32 @exit_phi_sunk_def(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: @exit_phi_sunk_def(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; CHECK:       pred.store.if:
-; CHECK-NEXT:    store i32 1, ptr [[DST:%.*]], align 4
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; CHECK:       pred.store.continue:
-; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; CHECK:       pred.store.if1:
-; CHECK-NEXT:    store i32 2, ptr [[DST]], align 4
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; CHECK:       pred.store.if3:
-; CHECK-NEXT:    store i32 3, ptr [[DST]], align 4
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
-; CHECK:       pred.store.if5:
-; CHECK-NEXT:    store i32 4, ptr [[DST]], align 4
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.continue6:
-; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
-; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[SEL]], i64 0
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], i32 0, i32 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    store i32 [[IV_NEXT]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ult i32 [[IV]], 2
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[VECTOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[EXT:%.*]] = phi i32 [ [[SEL]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
 entry:

@@ -230,38 +230,17 @@ exit:
 define void @cast_induction_tail_folding(ptr %A) {
 ; VF4-LABEL: define void @cast_induction_tail_folding(
 ; VF4-SAME: ptr [[A:%.*]]) {
-; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
-; VF4:       [[VECTOR_PH]]:
-; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF4:       [[VECTOR_BODY]]:
-; VF4-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; VF4:       [[PRED_STORE_IF]]:
-; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 0
-; VF4-NEXT:    store i32 0, ptr [[TMP0]], align 4
-; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; VF4:       [[PRED_STORE_CONTINUE]]:
-; VF4-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; VF4:       [[PRED_STORE_IF1]]:
-; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
-; VF4-NEXT:    store i32 1, ptr [[TMP1]], align 4
-; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; VF4:       [[PRED_STORE_CONTINUE2]]:
-; VF4-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; VF4:       [[PRED_STORE_IF3]]:
-; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
-; VF4-NEXT:    store i32 2, ptr [[TMP2]], align 4
-; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; VF4:       [[PRED_STORE_CONTINUE4]]:
-; VF4-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; VF4:       [[PRED_STORE_IF5]]:
-; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 3
-; VF4-NEXT:    store i32 3, ptr [[TMP3]], align 4
-; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; VF4:       [[PRED_STORE_CONTINUE6]]:
+; VF4-NEXT:  [[PRED_STORE_CONTINUE6:.*]]:
 ; VF4-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[PRED_STORE_CONTINUE6]] ], [ [[IV_NEXT:%.*]], %[[MIDDLE_BLOCK]] ]
+; VF4-NEXT:    [[IV_EXT:%.*]] = sext i32 [[IV]] to i64
+; VF4-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV_EXT]] to i32
+; VF4-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV_EXT]]
+; VF4-NEXT:    store i32 [[IV_TRUNC]], ptr [[GEP]], align 4
+; VF4-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; VF4-NEXT:    [[C:%.*]] = icmp slt i32 [[IV_NEXT]], 3
+; VF4-NEXT:    br i1 [[C]], label %[[MIDDLE_BLOCK]], label %[[EXIT:.*]]
 ; VF4:       [[EXIT]]:
 ; VF4-NEXT:    ret void
 ;
@@ -272,29 +251,24 @@ define void @cast_induction_tail_folding(ptr %A) {
 ; IC2:       [[VECTOR_PH]]:
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC2:       [[VECTOR_BODY]]:
-; IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
-; IC2-NEXT:    [[INDEX1:%.*]] = add i32 [[INDEX]], 1
-; IC2-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[INDEX]], 2
-; IC2-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[INDEX1]], 2
-; IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; IC2:       [[PRED_STORE_IF]]:
-; IC2-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64
+; IC2-NEXT:    [[TMP4:%.*]] = sext i32 1 to i64
 ; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP4]]
-; IC2-NEXT:    store i32 [[INDEX]], ptr [[TMP5]], align 4
-; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; IC2-NEXT:    store i32 0, ptr [[A]], align 4
+; IC2-NEXT:    store i32 1, ptr [[TMP5]], align 4
+; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE:.*]]
 ; IC2:       [[PRED_STORE_CONTINUE]]:
-; IC2-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
+; IC2-NEXT:    br label %[[PRED_STORE_IF1:.*]]
 ; IC2:       [[PRED_STORE_IF1]]:
+; IC2-NEXT:    br label %[[LOOP:.*]]
+; IC2:       [[LOOP]]:
+; IC2-NEXT:    [[INDEX1:%.*]] = phi i32 [ 2, %[[PRED_STORE_IF1]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; IC2-NEXT:    [[TMP6:%.*]] = sext i32 [[INDEX1]] to i64
+; IC2-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[TMP6]] to i32
 ; IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
-; IC2-NEXT:    store i32 [[INDEX1]], ptr [[TMP7]], align 4
-; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; IC2:       [[PRED_STORE_CONTINUE2]]:
-; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; IC2-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
-; IC2-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; IC2:       [[MIDDLE_BLOCK]]:
-; IC2-NEXT:    br label %[[EXIT:.*]]
+; IC2-NEXT:    store i32 [[IV_TRUNC]], ptr [[TMP7]], align 4
+; IC2-NEXT:    [[IV_NEXT]] = add i32 [[INDEX1]], 1
+; IC2-NEXT:    [[C:%.*]] = icmp slt i32 [[IV_NEXT]], 3
+; IC2-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;

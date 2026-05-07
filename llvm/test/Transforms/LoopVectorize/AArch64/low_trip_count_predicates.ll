@@ -17,8 +17,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; DEBUG-VS2: Main Loop VF:vscale x 8, Main Loop UF:1, Epilogue Loop VF:8, Epilogue Loop UF:1
 
 ; DEBUG-LABEL: LV: Checking a loop in 'trip_count_too_small'
-; DEBUG: LV: Found a loop with a very small trip count. This loop is worth vectorizing only if no scalar iteration overheads are incurred.
-; DEBUG: LV: Not vectorizing: Runtime SCEV check is required with -Os/-Oz.
+; DEBUG: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (3 < 8)
 
 ; DEBUG-LABEL: LV: Checking a loop in 'too_many_runtime_checks'
 ; DEBUG: LV: Found trip count: 0
@@ -496,18 +495,44 @@ define i32 @tc4_from_profile(ptr noundef readonly captures(none) %tmp, i64 %N) v
 ; CHECK-LABEL: define i32 @tc4_from_profile(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[TMP:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF8:![0-9]+]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[TMP5]] = add <vscale x 4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF12:![0-9]+]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD]] = add i32 [[SUM_0179]], [[TMP0]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]], !prof [[PROF8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY1]], !prof [[PROF13:![0-9]+]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY1]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
@@ -542,7 +567,14 @@ exit:
 ; CHECK-VS1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ; CHECK-VS1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK-VS1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
-; CHECK-VS1: [[PROF8]] = !{!"branch_weights", i32 10, i32 30}
+; CHECK-VS1: [[PROF8]] = !{!"branch_weights", i32 1, i32 127}
+; CHECK-VS1: [[PROF9]] = !{!"branch_weights", i32 10, i32 0}
+; CHECK-VS1: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META11:![0-9]+]]}
+; CHECK-VS1: [[META11]] = !{!"llvm.loop.estimated_trip_count", i32 1}
+; CHECK-VS1: [[PROF12]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK-VS1: [[PROF13]] = !{!"branch_weights", i32 1, i32 0}
+; CHECK-VS1: [[LOOP14]] = distinct !{[[LOOP14]], [[META2]], [[META1]], [[META15:![0-9]+]]}
+; CHECK-VS1: [[META15]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ;.
 ; CHECK-VS2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-VS2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -552,5 +584,12 @@ exit:
 ; CHECK-VS2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ; CHECK-VS2: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK-VS2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
-; CHECK-VS2: [[PROF8]] = !{!"branch_weights", i32 10, i32 30}
+; CHECK-VS2: [[PROF8]] = !{!"branch_weights", i32 1, i32 127}
+; CHECK-VS2: [[PROF9]] = !{!"branch_weights", i32 1, i32 0}
+; CHECK-VS2: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]], [[META11:![0-9]+]]}
+; CHECK-VS2: [[META11]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK-VS2: [[PROF12]] = !{!"branch_weights", i32 1, i32 7}
+; CHECK-VS2: [[PROF13]] = !{!"branch_weights", i32 10, i32 30}
+; CHECK-VS2: [[LOOP14]] = distinct !{[[LOOP14]], [[META2]], [[META1]], [[META15:![0-9]+]]}
+; CHECK-VS2: [[META15]] = !{!"llvm.loop.estimated_trip_count", i32 4}
 ;.

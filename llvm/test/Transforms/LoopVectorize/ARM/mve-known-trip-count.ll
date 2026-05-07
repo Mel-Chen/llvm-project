@@ -232,10 +232,10 @@ for.body:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
-; Larger example with predication that should also not be vectorized
+; Larger example with predication
 ; CHECK-LABEL: predicated_test
-; CHECK: LV: Selecting VF: 1
-; CHECK: LV: Selecting VF: 1
+; CHECK: LV: Selecting VF: 4.
+; CHECK: LV: Selecting VF: 4.
 define i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %2 = alloca [101 x i32], align 4
   %3 = alloca [21 x i32], align 4

@@ -17,51 +17,60 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 8
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 12
-; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[TMP11]], i32 3
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <4 x i8> [[TMP19]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr getelementptr inbounds nuw (i8, ptr @src, i64 16), align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP20]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i8> poison, i8 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i8> [[TMP12]], i8 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <2 x i8> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr [8 x i32], ptr @src, i64 0, i64 [[TMP13]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP14]], align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP20]], i64 1
-; CHECK-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP9]], i64 1
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 1
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP27]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP20]], i64 2
-; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 2
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF3:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 2
-; CHECK-NEXT:    store i32 [[TMP29]], ptr [[DST]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP20]], i64 3
-; CHECK-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[PRED_STORE_CONTINUE4]] ], [ [[IV_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[MUL_IV:%.*]] = mul nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[MUL_IV]]
+; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[GEP_SRC_1]], align 1
+; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i8 [[L_1]], 0
+; CHECK-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 3
+; CHECK-NEXT:    [[IV_OR:%.*]] = or disjoint i64 [[IV]], 4
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds [8 x i32], ptr @src, i64 0, i64 [[IV_OR]]
+; CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    store i32 [[TMP31]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 4
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -91,3 +100,9 @@ loop.latch:
 exit:
   ret void
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+;.

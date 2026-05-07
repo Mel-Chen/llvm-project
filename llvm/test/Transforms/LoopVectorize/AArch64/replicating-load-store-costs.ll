@@ -507,20 +507,29 @@ exit:
 define void @cost_scalar_load_of_address(ptr noalias %src, ptr %dst) {
 ; CHECK-LABEL: define void @cost_scalar_load_of_address(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[L_EXT:%.*]] = sext i32 [[L]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 [[L_EXT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP6]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 8
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop
@@ -733,7 +742,7 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK-NEXT:    [[TMP66]] = or <16 x i32> [[TMP65]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP67:%.*]] = icmp eq i64 [[INDEX_NEXT]], 48
-; CHECK-NEXT:    br i1 [[TMP67]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP67]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP68:%.*]] = call i32 @llvm.vector.reduce.or.v16i32(<16 x i32> [[TMP66]])
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]

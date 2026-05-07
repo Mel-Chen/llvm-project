@@ -31,7 +31,7 @@ define void @example1() {
 }
 
 ;CHECK-LABEL: @bound1(
-;CHECK-NOT: load <4 x i32>
+;CHECK: load <4 x i32>
 ;CHECK: ret void
 define void @bound1(i32 %k) {
   br label %1

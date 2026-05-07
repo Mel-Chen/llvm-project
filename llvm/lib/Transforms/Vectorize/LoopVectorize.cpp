@@ -8228,29 +8228,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   EpilogueLowering SEL =
       getEpilogueLowering(F, L, Hints, OptForSize, TTI, TLI, LVL, &IAI);
 
-  // Check the loop for a trip count threshold: vectorize loops with a tiny trip
-  // count by optimizing for size, to minimize overheads.
-  auto ExpectedTC = getSmallBestKnownTC(PSE, L);
-  if (ExpectedTC && ExpectedTC->isFixed() &&
-      ExpectedTC->getFixedValue() < TinyTripCountVectorThreshold) {
-    LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
-                      << "This loop is worth vectorizing only if no scalar "
-                      << "iteration overheads are incurred.");
-    if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
-      LLVM_DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
-    else {
-      LLVM_DEBUG(dbgs() << "\n");
-      // Tail-folded loops are efficient even when the loop
-      // iteration count is low. However, setting the epilogue policy to
-      // `CM_EpilogueNotAllowedLowTripLoop` prevents vectorizing loops
-      // with runtime checks. It's more effective to let
-      // `isOutsideLoopWorkProfitable` determine if vectorization is
-      // beneficial for the loop.
-      if (SEL != CM_EpilogueNotNeededFoldTail)
-        SEL = CM_EpilogueNotAllowedLowTripLoop;
-    }
-  }
-
   // Check the function attributes to see if implicit floats or vectors are
   // allowed.
   if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {

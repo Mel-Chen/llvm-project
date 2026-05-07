@@ -15,17 +15,39 @@ define i32 @foo_low_trip_count1(i32 %bound) {
 ; CHECK-LABEL: define i32 @foo_low_trip_count1(
 ; CHECK-SAME: i32 [[BOUND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[BOUND]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[I_08]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]], !prof [[PROF6:![0-9]+]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[I_8:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_8]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_8]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_8]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY1]], !prof [[PROF7:![0-9]+]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -52,19 +74,41 @@ define i32 @foo_low_trip_count2(i32 %bound) !prof !0 {
 ; The loop has a same invocation count with the function, but has a low
 ; trip_count per invocation and not worth to vectorize.
 ; CHECK-LABEL: define i32 @foo_low_trip_count2(
-; CHECK-SAME: i32 [[BOUND:%.*]]) !prof [[PROF1:![0-9]+]] {
+; CHECK-SAME: i32 [[BOUND:%.*]]) !prof [[PROF10:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[BOUND]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[I_08]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]], !prof [[PROF6]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[I_8:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_8]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !prof [[PROF0]]
+; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_8]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_8]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY1]], !prof [[PROF7]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -98,13 +142,13 @@ define i32 @foo_low_trip_count3(i1 %cond, i32 %bound) !prof !0 {
 ; loop invocation weights of 10 are the above {10, 2490} and {10, 0}. This
 ; explains the values for PROF4 and PROF10
 ; CHECK-LABEL: define i32 @foo_low_trip_count3(
-; CHECK-SAME: i1 [[COND:%.*]], i32 [[BOUND:%.*]]) !prof [[PROF1]] {
+; CHECK-SAME: i1 [[COND:%.*]], i32 [[BOUND:%.*]]) !prof [[PROF10]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_PREHEADER:.*]], label %[[FOR_END:.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_PREHEADER:.*]], label %[[FOR_END:.*]], !prof [[PROF13:![0-9]+]]
 ; CHECK:       [[FOR_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[BOUND]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
@@ -118,10 +162,10 @@ define i32 @foo_low_trip_count3(i1 %cond, i32 %bound) !prof !0 {
 ; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF4:![0-9]+]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF14:![0-9]+]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF6]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
@@ -134,7 +178,7 @@ define i32 @foo_low_trip_count3(i1 %cond, i32 %bound) !prof !0 {
 ; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !prof [[PROF10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !prof [[PROF17:![0-9]+]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
@@ -167,17 +211,40 @@ define i32 @foo_low_trip_count_icmp_sgt(i32 %bound) {
 ; CHECK-LABEL: define i32 @foo_low_trip_count_icmp_sgt(
 ; CHECK-SAME: i32 [[BOUND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[BOUND]], i32 -1)
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SMAX]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[I_08]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]], !prof [[PROF6]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[I_8:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_8]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[I_08]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !prof [[PROF0]]
+; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_8]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[I_8]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY1]], !prof [[PROF7]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -203,10 +270,22 @@ for.end:
 define i32 @const_low_trip_count() {
 ; Simple loop with constant, small trip count and no profiling info.
 ; CHECK-LABEL: define i32 @const_low_trip_count() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr @tab, align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> splat (i8 2), <2 x i8> splat (i8 1)
+; CHECK-NEXT:    store <2 x i8> [[TMP1]], ptr @tab, align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP0]], 0
@@ -214,7 +293,7 @@ define i32 @const_low_trip_count() {
 ; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[I_08]], 2
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY1]], label %[[FOR_END:.*]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -253,7 +332,7 @@ define i32 @const_large_trip_count() {
 ; CHECK-NEXT:    store <4 x i8> [[TMP2]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -267,7 +346,7 @@ define i32 @const_large_trip_count() {
 ; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[I_08]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -293,10 +372,29 @@ for.end:
 define i32 @const_small_trip_count_step() {
 ; Simple loop with static, small trip count and no profiling info.
 ; CHECK-LABEL: define i32 @const_small_trip_count_step() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @tab, align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP9]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> poison, i8 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> [[TMP3]], i8 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i8> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x i8> splat (i8 2), <2 x i8> splat (i8 1)
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
+; CHECK-NEXT:    store i8 [[TMP7]], ptr @tab, align 1
+; CHECK-NEXT:    store i8 [[TMP8]], ptr [[TMP9]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 10, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP0]], 0
@@ -304,7 +402,7 @@ define i32 @const_small_trip_count_step() {
 ; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 5
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[I_08]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY1]], label %[[FOR_END:.*]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -330,7 +428,7 @@ for.end:
 define i32 @const_trip_over_profile() !prof !0 {
 ; constant trip count takes precedence over profile data
 ; CHECK-LABEL: define i32 @const_trip_over_profile(
-; CHECK-SAME: ) !prof [[PROF1]] {
+; CHECK-SAME: ) !prof [[PROF10]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -344,7 +442,7 @@ define i32 @const_trip_over_profile() !prof !0 {
 ; CHECK-NEXT:    store <4 x i8> [[TMP2]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF15:![0-9]+]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF25:![0-9]+]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -358,7 +456,7 @@ define i32 @const_trip_over_profile() !prof !0 {
 ; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[I_08]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]], !prof [[PROF17:![0-9]+]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_END:.*]], !prof [[PROF27:![0-9]+]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -386,23 +484,35 @@ for.end:
 !2 = !{!"branch_weights", i32 10, i32 90}
 !3 = !{!"branch_weights", i32 10, i32 10000}
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 100, i32 0}
-; CHECK: [[PROF1]] = !{!"function_entry_count", i64 100}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 10, i32 90}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 127}
-; CHECK: [[PROF4]] = !{!"branch_weights", i32 10, i32 2490}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[META8]] = !{!"llvm.loop.estimated_trip_count", i32 250}
-; CHECK: [[PROF9]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK: [[PROF10]] = !{!"branch_weights", i32 10, i32 0}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META7]], [[META6]], [[META12:![0-9]+]]}
-; CHECK: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 1}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META7]]}
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META7]], [[META6]]}
-; CHECK: [[PROF15]] = !{!"branch_weights", i32 1, i32 249}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META6]], [[META7]], [[META8]]}
-; CHECK: [[PROF17]] = !{!"branch_weights", i32 0, i32 1}
-; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META7]], [[META6]], [[META12]]}
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 0}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; CHECK: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK: [[PROF6]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK: [[PROF7]] = !{!"branch_weights", i32 100, i32 0}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META4]], [[META3]], [[META9:![0-9]+]]}
+; CHECK: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 1}
+; CHECK: [[PROF10]] = !{!"function_entry_count", i64 100}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META4]], [[META5]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META4]], [[META3]], [[META9]]}
+; CHECK: [[PROF13]] = !{!"branch_weights", i32 10, i32 90}
+; CHECK: [[PROF14]] = !{!"branch_weights", i32 10, i32 2490}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META3]], [[META4]], [[META16:![0-9]+]]}
+; CHECK: [[META16]] = !{!"llvm.loop.estimated_trip_count", i32 250}
+; CHECK: [[PROF17]] = !{!"branch_weights", i32 10, i32 0}
+; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META4]], [[META3]], [[META9]]}
+; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META3]], [[META4]], [[META5]]}
+; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META4]], [[META3]], [[META9]]}
+; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META4]], [[META3]]}
+; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META3]], [[META4]]}
+; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META4]], [[META3]]}
+; CHECK: [[LOOP24]] = distinct !{[[LOOP24]], [[META4]], [[META3]]}
+; CHECK: [[PROF25]] = !{!"branch_weights", i32 1, i32 249}
+; CHECK: [[LOOP26]] = distinct !{[[LOOP26]], [[META3]], [[META4]], [[META16]]}
+; CHECK: [[PROF27]] = !{!"branch_weights", i32 0, i32 1}
+; CHECK: [[LOOP28]] = distinct !{[[LOOP28]], [[META4]], [[META3]], [[META9]]}
 ;.

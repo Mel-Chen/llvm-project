@@ -20,24 +20,36 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 99, i64 98, i64 97, i64 96>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 99, [[INDEX]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND1]], splat (i8 14)
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[ARR]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i64 -3
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 8 [[TMP6]], <4 x i1> [[REVERSE]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
-; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add nuw <4 x i8> [[VEC_IND1]], splat (i8 4)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 87, [[BB6]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[IV]], 1
+; CHECK-NEXT:    [[ICMP17:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    br i1 [[ICMP17]], label [[BB18:%.*]], label [[LOOP_LATCH]], !prof [[PROF5:![0-9]+]]
+; CHECK:       bb18:
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
+; CHECK-NEXT:    [[GETELEMENTPTR19:%.*]] = getelementptr inbounds i64, ptr [[ARR]], i64 [[OR]]
+; CHECK-NEXT:    store i64 1, ptr [[GETELEMENTPTR19]], align 8
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[ICMP22:%.*]] = icmp eq i64 [[IV_NEXT]], 84
+; CHECK-NEXT:    br i1 [[ICMP22]], label [[BB7:%.*]], label [[LOOP_HEADER]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    ret void
 ;
@@ -79,4 +91,8 @@ attributes #0 = {"target-cpu"="haswell" "target-features"="+avx2" }
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 24}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 1, i32 1}
+; CHECK: [[PROF6]] = !{!"branch_weights", i32 1, i32 0}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META2]], [[META8:![0-9]+]]}
+; CHECK: [[META8]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ;.

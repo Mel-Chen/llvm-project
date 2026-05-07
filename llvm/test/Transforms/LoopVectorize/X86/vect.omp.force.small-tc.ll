@@ -116,26 +116,70 @@ for.end:
 ;
 define void @vectorized1(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
 ; CHECK-LABEL: @vectorized1(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:  iter.check:
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; CHECK:       vector.main.loop.iter.check:
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i8> [[VEC_IND]], splat (i8 19)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr align 4 [[TMP2]], <8 x i1> [[TMP0]], <8 x float> poison), !llvm.access.group [[ACC_GRP7:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr align 4 [[TMP4]], <8 x i1> [[TMP0]], <8 x float> poison), !llvm.access.group [[ACC_GRP7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <8 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD1]]
-; CHECK-NEXT:    call void @llvm.masked.store.v8f32.p0(<8 x float> [[TMP6]], ptr align 4 [[TMP4]], <8 x i1> [[TMP0]]), !llvm.access.group [[ACC_GRP7]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i8> [[VEC_IND]], splat (i8 8)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[B]], i64 12
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[B]], align 4, !llvm.access.group [[ACC_GRP7:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP0]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP1]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x float>, ptr [[TMP10]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 12
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[A]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP3]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP11]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[A]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP3]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP11]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP5]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF1]]
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 16, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK:       vec.epilog.vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP2]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd fast <4 x float> [[WIDE_LOAD8]], [[WIDE_LOAD9]]
+; CHECK-NEXT:    store <4 x float> [[TMP12]], ptr [[TMP4]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    br i1 true, label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       vec.epilog.scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 16, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX2]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    store float [[ADD]], ptr [[ARRAYIDX2]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 20
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -172,16 +216,17 @@ define void @vectorized2(ptr noalias nocapture %A, ptr noalias nocapture readonl
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP1]], align 4, !llvm.access.group [[ACC_GRP7]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x float>, ptr [[TMP3]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[B]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP0]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 8
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x float>, ptr [[A]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x float>, ptr [[TMP1]], align 4, !llvm.access.group [[ACC_GRP7]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <8 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; CHECK-NEXT:    store <8 x float> [[TMP5]], ptr [[TMP3]], align 4, !llvm.access.group [[ACC_GRP7]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <8 x float> [[WIDE_LOAD2]], [[WIDE_LOAD3]]
+; CHECK-NEXT:    store <8 x float> [[TMP5]], ptr [[A]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    store <8 x float> [[TMP3]], ptr [[TMP1]], align 4, !llvm.access.group [[ACC_GRP7]]
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.end:

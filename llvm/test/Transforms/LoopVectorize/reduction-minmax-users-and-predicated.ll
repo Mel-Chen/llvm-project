@@ -41,52 +41,20 @@ exit:
 define i32 @chained_smax(i32 %x, ptr %src) {
 ; CHECK-LABEL: define i32 @chained_smax(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[SRC:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[BROADCAST_SPLAT]], <4 x i32> zeroinitializer)
-; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
-; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
-; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2:.*]]
-; CHECK:       [[PRED_LOAD_IF1]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP11]], i64 1
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
-; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ [[TMP6]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP7]], %[[PRED_LOAD_IF1]] ]
-; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF3:.*]], label %[[PRED_LOAD_CONTINUE4:.*]]
-; CHECK:       [[PRED_LOAD_IF3]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP17]], i64 2
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
+; CHECK-NEXT:  [[PRED_LOAD_IF3:.*]]:
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4:.*]]
 ; CHECK:       [[PRED_LOAD_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ [[TMP8]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP13]], %[[PRED_LOAD_IF3]] ]
-; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF5:.*]], label %[[PRED_LOAD_CONTINUE6:.*]]
-; CHECK:       [[PRED_LOAD_IF5]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 3
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PRED_LOAD_IF3]] ], [ [[IV_NEXT:%.*]], %[[PRED_LOAD_CONTINUE4]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi i32 [ 0, %[[PRED_LOAD_IF3]] ], [ [[MAX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE4]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[MAX_1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 [[MAX]])
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP23]], i64 3
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
-; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i32> [ [[TMP12]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP15]], %[[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP20]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> [[TMP21]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP28:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP27]])
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[MAX_NEXT]] = tail call i32 @llvm.smax.i32(i32 [[TMP23]], i32 [[MAX_1]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_LOAD_CONTINUE4]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP28:%.*]] = phi i32 [ [[MAX_NEXT]], %[[PRED_LOAD_CONTINUE4]] ]
 ; CHECK-NEXT:    ret i32 [[TMP28]]
 ;
 entry:
