@@ -7439,7 +7439,6 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VectorizationFactor &VF, Loop *L,
                                         PredicatedScalarEvolution &PSE,
                                         VPCostContext &CostCtx, VPlan &Plan,
-                                        EpilogueLowering SEL,
                                         std::optional<unsigned> VScale) {
   InstructionCost RtC = Checks.getCost();
   if (!RtC.isValid())
@@ -7520,7 +7519,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // is allowed, choose the next closest multiple of VF. This should partly
   // compensate for ignoring the epilogue cost.
   uint64_t MinTC = std::max(MinTC1, MinTC2);
-  if (SEL == CM_EpilogueAllowed)
+  if (Plan.hasScalarTail())
     MinTC = alignTo(MinTC, IntVF);
   VF.MinProfitableTripCount = ElementCount::getFixed(MinTC);
 
@@ -8203,7 +8202,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                           CM.PSE, L);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx, *BestPlanPtr,
-                                     SEL, Config.getVScaleForTuning())) {
+                                     Config.getVScaleForTuning())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),
