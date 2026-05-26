@@ -2101,6 +2101,8 @@ VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
   return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
                                  !match(getOperand(2), m_True()), Alignment,
                                  Ctx);
+
+  //return VPWidenIntrinsicRecipe::computeCost(VF, Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
