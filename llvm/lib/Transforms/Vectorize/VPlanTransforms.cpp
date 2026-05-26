@@ -6990,10 +6990,11 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // affine addRec.
       const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
       const SCEV *Start;
-      const APInt *Step;
+      const SCEVConstant *Step;
       // TODO: Support non-constant loop invariant stride.
-      if (!match(PtrSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step),
-                                              m_SpecificLoop(&L))))
+      if (!match(PtrSCEV,
+                 m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step),
+                                     m_SpecificLoop(&L))))
         continue;
 
       Type *LoadTy = TypeInfo.inferScalarType(LoadR);
@@ -7030,13 +7031,20 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
       VPBuilder Builder(LoadR);
       // Create the base pointer of strided access.
+      // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
+      // supports a general VPValue as the start value.
       VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
-      VPValue *StrideInBytes =
-          Plan.getConstantInt(VectorLoop->getCanonicalIVType(),
-                              Step->getSExtValue(), /*IsSigned=*/true);
+      VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
+      Type *StrideTy = TypeInfo.inferScalarType(StrideInBytes);
+      assert(StrideTy == PSE.getSE()->getDataLayout().getIndexType(
+                             TypeInfo.inferScalarType(Ptr)) &&
+             "Stride type from SCEV must match the index type");
+      VPValue *CanIV = Builder.createScalarZExtOrTrunc(
+          VectorLoop->getCanonicalIV(), StrideTy,
+          VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {VectorLoop->getCanonicalIV(), StrideInBytes},
+          Instruction::Mul, {CanIV, StrideInBytes},
           {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
       auto *BasePtr = Builder.createNoWrapPtrAdd(
           StartVPV, Offset,
