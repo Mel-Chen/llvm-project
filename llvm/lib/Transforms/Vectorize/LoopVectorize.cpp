@@ -269,6 +269,10 @@ static cl::opt<bool> EnableMaskedInterleavedMemAccesses(
     "enable-masked-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on masked interleaved memory accesses in a loop"));
 
+static cl::opt<bool> EnableStridedAccesses(
+    "enable-strided-accesses", cl::init(true), cl::Hidden,
+    cl::desc("Enable converting gather/scatter to strided accesses in VPlan"));
+
 static cl::opt<unsigned> ForceTargetNumScalarRegs(
     "force-target-num-scalar-regs", cl::init(0), cl::Hidden,
     cl::desc("A flag that overrides the target's number of scalar registers."));
@@ -7035,7 +7039,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // legal and profitable. Use a new VPCostContext to ensure type inference
   // reflects the current plan state.
   // TODO: Remove this VPCostContext scope once VPTypeAnalysis is removed.
-  {
+  if (EnableStridedAccesses) {
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
                           OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,

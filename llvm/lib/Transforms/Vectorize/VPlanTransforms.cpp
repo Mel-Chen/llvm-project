@@ -7039,12 +7039,13 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       assert(StrideTy == PSE.getSE()->getDataLayout().getIndexType(
                              TypeInfo.inferScalarType(Ptr)) &&
              "Stride type from SCEV must match the index type");
-      VPValue *CanIV = Builder.createScalarZExtOrTrunc(
-          VectorLoop->getCanonicalIV(), StrideTy,
-          VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
+      VPValue *CanIV = VectorLoop->getCanonicalIV();
+      VPValue *StrideForOffset = Plan.getConstantInt(
+          VectorLoop->getCanonicalIVType(), Step->getAPInt().getSExtValue(),
+          /*IsSigned=*/true);
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {CanIV, StrideInBytes},
+          Instruction::Mul, {CanIV, StrideForOffset},
           {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
       auto *BasePtr = Builder.createNoWrapPtrAdd(
           StartVPV, Offset,
