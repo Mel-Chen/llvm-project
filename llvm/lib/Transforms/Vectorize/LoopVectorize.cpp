@@ -6830,8 +6830,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, CM.isEpilogueAllowed());
+  if (!RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                      InterleaveGroups, CM.isEpilogueAllowed()))
+    return nullptr;
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.

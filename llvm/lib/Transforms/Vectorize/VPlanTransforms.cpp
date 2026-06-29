@@ -3718,13 +3718,13 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::createInterleaveGroups(
+bool VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
     const bool &EpilogueAllowed) {
   if (InterleaveGroups.empty())
-    return;
+    return true;
 
   DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe;
   for (VPBasicBlock *VPBB :
@@ -3748,7 +3748,7 @@ void VPlanTransforms::createInterleaveGroups(
     if (llvm::any_of(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
           return !IRMemberToRecipe.contains(Member);
         }))
-      continue;
+      return false;
 
     auto *Start = IRMemberToRecipe.lookup(IG->getMember(0));
     VPIRMetadata InterleaveMD(*Start);
@@ -3827,6 +3827,7 @@ void VPlanTransforms::createInterleaveGroups(
         MemberR->eraseFromParent();
       }
   }
+  return true;
 }
 
 /// Expand a VPWidenIntOrFpInduction into executable recipes, for the initial

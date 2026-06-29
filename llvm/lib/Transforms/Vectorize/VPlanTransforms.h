@@ -341,7 +341,7 @@ struct VPlanTransforms {
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
   // insertion point.
-  static void createInterleaveGroups(
+  static bool createInterleaveGroups(
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
