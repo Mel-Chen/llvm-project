@@ -17,8 +17,7 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF4UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4UF1-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDEX]], 3
 ; VF4UF1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP0]]
-; VF4UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP1]], i64 0
-; VF4UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; VF4UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = getelementptr i32, ptr [[TMP1]], <4 x i64> <i64 0, i64 2, i64 4, i64 6>
 ; VF4UF1-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; VF4UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[INDEX]]
 ; VF4UF1-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP2]], align 4
@@ -133,11 +132,9 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF2UF2-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDEX]], 3
 ; VF2UF2-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 ; VF2UF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP1]]
-; VF2UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP3]], i64 0
-; VF2UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP2]]
-; VF2UF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i64 0
-; VF2UF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT1]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; VF2UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = getelementptr i32, ptr [[TMP3]], <2 x i64> <i64 0, i64 2>
+; VF2UF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = getelementptr i32, ptr [[TMP4]], <2 x i64> <i64 0, i64 2>
 ; VF2UF2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true), <2 x i32> poison)
 ; VF2UF2-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[BROADCAST_SPLAT2]], <2 x i1> splat (i1 true), <2 x i32> poison)
 ; VF2UF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[INDEX]]
