@@ -175,34 +175,18 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; NO-FOLDING-LABEL: define i1 @scalarize_ptr_induction(
 ; NO-FOLDING-SAME: ptr [[START:%.*]], ptr [[END:%.*]], ptr noalias [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; NO-FOLDING-NEXT:  [[ENTRY:.*]]:
-; NO-FOLDING-NEXT:    [[START5:%.*]] = ptrtoint ptr [[START]] to i64
-; NO-FOLDING-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
 ; NO-FOLDING-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; NO-FOLDING-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; NO-FOLDING-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -12
-; NO-FOLDING-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START5]]
+; NO-FOLDING-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -12
+; NO-FOLDING-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; NO-FOLDING-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 12
 ; NO-FOLDING-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; NO-FOLDING-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-FOLDING-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 1
-; NO-FOLDING-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 24)
-; NO-FOLDING-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], [[UMAX]]
-; NO-FOLDING-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
-; NO-FOLDING:       [[VECTOR_MEMCHECK]]:
-; NO-FOLDING-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; NO-FOLDING-NEXT:    [[TMP6:%.*]] = add i64 [[END1]], -12
-; NO-FOLDING-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[START2]]
-; NO-FOLDING-NEXT:    [[TMP8:%.*]] = udiv i64 [[TMP7]], 12
-; NO-FOLDING-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 12
-; NO-FOLDING-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 8
-; NO-FOLDING-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP10]]
-; NO-FOLDING-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP3]]
-; NO-FOLDING-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[START]], [[SCEVGEP]]
-; NO-FOLDING-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; NO-FOLDING-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; NO-FOLDING-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ule i64 [[TMP3]], [[TMP5]]
+; NO-FOLDING-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-FOLDING:       [[VECTOR_PH]]:
-; NO-FOLDING-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; NO-FOLDING-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
+; NO-FOLDING-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP4]], 1
 ; NO-FOLDING-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP12]]
 ; NO-FOLDING-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; NO-FOLDING-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[N_MOD_VF]]
@@ -218,11 +202,7 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; NO-FOLDING-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP17]]
 ; NO-FOLDING-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 4
 ; NO-FOLDING-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[TMP18]], <vscale x 2 x i64> [[TMP28]]
-; NO-FOLDING-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[WIDE_GEP]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i32> poison), !alias.scope [[META4:![0-9]+]]
-; NO-FOLDING-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP12]]
-; NO-FOLDING-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-FOLDING-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
-; NO-FOLDING:       [[MIDDLE_BLOCK]]:
+; NO-FOLDING-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[WIDE_GEP]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i32> poison)
 ; NO-FOLDING-NEXT:    [[TMP19:%.*]] = zext <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i64>
 ; NO-FOLDING-NEXT:    [[TMP20:%.*]] = mul <vscale x 2 x i64> [[TMP19]], splat (i64 -7070675565921424023)
 ; NO-FOLDING-NEXT:    [[TMP21:%.*]] = add <vscale x 2 x i64> [[TMP20]], splat (i64 -4)
@@ -230,10 +210,14 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; NO-FOLDING-NEXT:    [[TMP23:%.*]] = mul nuw i32 [[TMP22]], 2
 ; NO-FOLDING-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], 1
 ; NO-FOLDING-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 2 x i64> [[TMP21]], i32 [[TMP24]]
-; NO-FOLDING-NEXT:    store i64 [[TMP25]], ptr [[DST]], align 1, !alias.scope [[META8:![0-9]+]], !noalias [[META4]]
+; NO-FOLDING-NEXT:    store i64 [[TMP25]], ptr [[DST]], align 1
+; NO-FOLDING-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP12]]
+; NO-FOLDING-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-FOLDING-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; NO-FOLDING:       [[MIDDLE_BLOCK]]:
 ; NO-FOLDING-NEXT:    br label %[[SCALAR_PH]]
 ; NO-FOLDING:       [[SCALAR_PH]]:
-; NO-FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ], [ [[START]], %[[VECTOR_MEMCHECK]] ]
+; NO-FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
 ; NO-FOLDING-NEXT:    br label %[[LOOP:.*]]
 ; NO-FOLDING:       [[LOOP]]:
 ; NO-FOLDING-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
@@ -246,7 +230,7 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; NO-FOLDING-NEXT:    store i64 [[MUL2]], ptr [[DST]], align 1
 ; NO-FOLDING-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 12
 ; NO-FOLDING-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; NO-FOLDING-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; NO-FOLDING-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; NO-FOLDING:       [[EXIT]]:
 ; NO-FOLDING-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
 ; NO-FOLDING-NEXT:    ret i1 [[CMP_LCSSA]]

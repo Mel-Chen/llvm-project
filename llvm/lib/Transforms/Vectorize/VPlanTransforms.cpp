@@ -3763,6 +3763,8 @@ void VPlanTransforms::createInterleaveGroups(
         auto *LoadR = cast<VPWidenLoadRecipe>(MemberR->getAsRecipe());
         VPBuilder Builder(LoadR);
         VPValue *Base = MemberR->getAddr();
+        if (!vputils::isSingleScalar(Base))
+          continue;
         Type *IndexTy = DL.getIndexType(Base->getScalarType());
         VPValue *StepVec =
             Builder.createNaryOp(VPInstruction::StepVector, {}, IndexTy);
