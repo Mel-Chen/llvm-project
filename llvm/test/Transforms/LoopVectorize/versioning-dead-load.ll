@@ -30,31 +30,31 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF4UF1:       [[MIDDLE_BLOCK]]:
 ; VF4UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF4UF1:       [[SCALAR_PH]]:
-; VF4UF1-NEXT:    br label %[[FOR_BODY:.*]]
-; VF4UF1:       [[FOR_BODY]]:
-; VF4UF1-NEXT:    [[I_021:%.*]] = phi i64 [ [[INC:%.*]], %[[IF_END:.*]] ], [ 0, %[[SCALAR_PH]] ]
-; VF4UF1-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl nuw nsw i64 [[I_021]], 3
+; VF4UF1-NEXT:    br label %[[LOOP_HEADER:.*]]
+; VF4UF1:       [[LOOP_HEADER]]:
+; VF4UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF4UF1-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl nuw nsw i64 [[IV]], 3
 ; VF4UF1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[ARRAYIDX_IDX]]
 ; VF4UF1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; VF4UF1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 4
 ; VF4UF1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; VF4UF1-NEXT:    [[MUL3:%.*]] = mul nsw i64 [[I_021]], [[STRIDE]]
+; VF4UF1-NEXT:    [[MUL3:%.*]] = mul nsw i64 [[IV]], [[STRIDE]]
 ; VF4UF1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[MUL3]]
 ; VF4UF1-NEXT:    store i32 [[TMP5]], ptr [[ARRAYIDX4]], align 4
 ; VF4UF1-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[TMP5]], 0
-; VF4UF1-NEXT:    br i1 [[CMP5]], label %[[IF_THEN:.*]], label %[[IF_END]]
+; VF4UF1-NEXT:    br i1 [[CMP5]], label %[[IF_THEN:.*]], label %[[LOOP_LATCH]]
 ; VF4UF1:       [[IF_THEN]]:
 ; VF4UF1-NEXT:    [[REM:%.*]] = srem i64 3, [[STRIDE]]
 ; VF4UF1-NEXT:    [[TMP7:%.*]] = trunc nuw nsw i64 [[REM]] to i32
 ; VF4UF1-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP6]], [[TMP7]]
-; VF4UF1-NEXT:    br label %[[IF_END]]
-; VF4UF1:       [[IF_END]]:
-; VF4UF1-NEXT:    [[CONV9:%.*]] = phi i32 [ [[TMP8]], %[[IF_THEN]] ], [ 0, %[[FOR_BODY]] ]
-; VF4UF1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[I_021]]
-; VF4UF1-NEXT:    store i32 [[CONV9]], ptr [[ARRAYIDX10]], align 4
-; VF4UF1-NEXT:    [[INC]] = add nuw nsw i64 [[I_021]], 1
-; VF4UF1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1024
-; VF4UF1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF4UF1-NEXT:    br label %[[LOOP_LATCH]]
+; VF4UF1:       [[LOOP_LATCH]]:
+; VF4UF1-NEXT:    [[T_0:%.*]] = phi i32 [ [[TMP8]], %[[IF_THEN]] ], [ 0, %[[LOOP_HEADER]] ]
+; VF4UF1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[IV]]
+; VF4UF1-NEXT:    store i32 [[T_0]], ptr [[ARRAYIDX10]], align 4
+; VF4UF1-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VF4UF1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; VF4UF1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF4UF1:       [[EXIT]]:
 ; VF4UF1-NEXT:    ret void
 ;
@@ -90,31 +90,31 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF1UF2:       [[MIDDLE_BLOCK]]:
 ; VF1UF2-NEXT:    br label %[[EXIT:.*]]
 ; VF1UF2:       [[SCALAR_PH]]:
-; VF1UF2-NEXT:    br label %[[FOR_BODY:.*]]
-; VF1UF2:       [[FOR_BODY]]:
-; VF1UF2-NEXT:    [[I_021:%.*]] = phi i64 [ [[INC:%.*]], %[[IF_END:.*]] ], [ 0, %[[SCALAR_PH]] ]
-; VF1UF2-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl nuw nsw i64 [[I_021]], 3
+; VF1UF2-NEXT:    br label %[[LOOP_HEADER:.*]]
+; VF1UF2:       [[LOOP_HEADER]]:
+; VF1UF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF1UF2-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl nuw nsw i64 [[IV]], 3
 ; VF1UF2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[ARRAYIDX_IDX]]
 ; VF1UF2-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; VF1UF2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 4
 ; VF1UF2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; VF1UF2-NEXT:    [[MUL3:%.*]] = mul nsw i64 [[I_021]], [[STRIDE]]
+; VF1UF2-NEXT:    [[MUL3:%.*]] = mul nsw i64 [[IV]], [[STRIDE]]
 ; VF1UF2-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[MUL3]]
 ; VF1UF2-NEXT:    store i32 [[TMP12]], ptr [[ARRAYIDX4]], align 4
 ; VF1UF2-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[TMP12]], 0
-; VF1UF2-NEXT:    br i1 [[CMP5]], label %[[IF_THEN:.*]], label %[[IF_END]]
+; VF1UF2-NEXT:    br i1 [[CMP5]], label %[[IF_THEN:.*]], label %[[LOOP_LATCH]]
 ; VF1UF2:       [[IF_THEN]]:
 ; VF1UF2-NEXT:    [[REM:%.*]] = srem i64 3, [[STRIDE]]
 ; VF1UF2-NEXT:    [[TMP14:%.*]] = trunc nuw nsw i64 [[REM]] to i32
 ; VF1UF2-NEXT:    [[TMP15:%.*]] = mul i32 [[TMP13]], [[TMP14]]
-; VF1UF2-NEXT:    br label %[[IF_END]]
-; VF1UF2:       [[IF_END]]:
-; VF1UF2-NEXT:    [[CONV9:%.*]] = phi i32 [ [[TMP15]], %[[IF_THEN]] ], [ 0, %[[FOR_BODY]] ]
-; VF1UF2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[I_021]]
-; VF1UF2-NEXT:    store i32 [[CONV9]], ptr [[ARRAYIDX10]], align 4
-; VF1UF2-NEXT:    [[INC]] = add nuw nsw i64 [[I_021]], 1
-; VF1UF2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1024
-; VF1UF2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF1UF2-NEXT:    br label %[[LOOP_LATCH]]
+; VF1UF2:       [[LOOP_LATCH]]:
+; VF1UF2-NEXT:    [[T_0:%.*]] = phi i32 [ [[TMP15]], %[[IF_THEN]] ], [ 0, %[[LOOP_HEADER]] ]
+; VF1UF2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[IV]]
+; VF1UF2-NEXT:    store i32 [[T_0]], ptr [[ARRAYIDX10]], align 4
+; VF1UF2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VF1UF2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; VF1UF2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF1UF2:       [[EXIT]]:
 ; VF1UF2-NEXT:    ret void
 ;
@@ -154,63 +154,63 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF2UF2:       [[MIDDLE_BLOCK]]:
 ; VF2UF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2UF2:       [[SCALAR_PH]]:
-; VF2UF2-NEXT:    br label %[[FOR_BODY:.*]]
-; VF2UF2:       [[FOR_BODY]]:
-; VF2UF2-NEXT:    [[I_021:%.*]] = phi i64 [ [[INC:%.*]], %[[IF_END:.*]] ], [ 0, %[[SCALAR_PH]] ]
-; VF2UF2-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl nuw nsw i64 [[I_021]], 3
+; VF2UF2-NEXT:    br label %[[LOOP_HEADER:.*]]
+; VF2UF2:       [[LOOP_HEADER]]:
+; VF2UF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; VF2UF2-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl nuw nsw i64 [[IV]], 3
 ; VF2UF2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[ARRAYIDX_IDX]]
 ; VF2UF2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; VF2UF2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 4
 ; VF2UF2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; VF2UF2-NEXT:    [[MUL3:%.*]] = mul nsw i64 [[I_021]], [[STRIDE]]
+; VF2UF2-NEXT:    [[MUL3:%.*]] = mul nsw i64 [[IV]], [[STRIDE]]
 ; VF2UF2-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[MUL3]]
 ; VF2UF2-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX4]], align 4
 ; VF2UF2-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[TMP10]], 0
-; VF2UF2-NEXT:    br i1 [[CMP5]], label %[[IF_THEN:.*]], label %[[IF_END]]
+; VF2UF2-NEXT:    br i1 [[CMP5]], label %[[IF_THEN:.*]], label %[[LOOP_LATCH]]
 ; VF2UF2:       [[IF_THEN]]:
 ; VF2UF2-NEXT:    [[REM:%.*]] = srem i64 3, [[STRIDE]]
 ; VF2UF2-NEXT:    [[TMP12:%.*]] = trunc nuw nsw i64 [[REM]] to i32
 ; VF2UF2-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP11]], [[TMP12]]
-; VF2UF2-NEXT:    br label %[[IF_END]]
-; VF2UF2:       [[IF_END]]:
-; VF2UF2-NEXT:    [[CONV9:%.*]] = phi i32 [ [[TMP13]], %[[IF_THEN]] ], [ 0, %[[FOR_BODY]] ]
-; VF2UF2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[I_021]]
-; VF2UF2-NEXT:    store i32 [[CONV9]], ptr [[ARRAYIDX10]], align 4
-; VF2UF2-NEXT:    [[INC]] = add nuw nsw i64 [[I_021]], 1
-; VF2UF2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1024
-; VF2UF2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF2UF2-NEXT:    br label %[[LOOP_LATCH]]
+; VF2UF2:       [[LOOP_LATCH]]:
+; VF2UF2-NEXT:    [[T_0:%.*]] = phi i32 [ [[TMP13]], %[[IF_THEN]] ], [ 0, %[[LOOP_HEADER]] ]
+; VF2UF2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[IV]]
+; VF2UF2-NEXT:    store i32 [[T_0]], ptr [[ARRAYIDX10]], align 4
+; VF2UF2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VF2UF2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; VF2UF2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2UF2:       [[EXIT]]:
 ; VF2UF2-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop.header
 
-for.body:
-  %i.021 = phi i64 [ %inc, %if.end ], [ 0, %entry ]
-  %arrayidx.idx = shl nuw nsw i64 %i.021, 3
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %arrayidx.idx = shl nuw nsw i64 %iv, 3
   %arrayidx = getelementptr inbounds nuw i8, ptr %p, i64 %arrayidx.idx
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx2 = getelementptr inbounds nuw i8, ptr %arrayidx, i64 4
   %1 = load i32, ptr %arrayidx2, align 4
-  %mul3 = mul nsw i64 %i.021, %stride
+  %mul3 = mul nsw i64 %iv, %stride
   %arrayidx4 = getelementptr inbounds [4 x i8], ptr %q, i64 %mul3
   store i32 %0, ptr %arrayidx4, align 4
   %cmp5 = icmp sgt i32 %0, 0
-  br i1 %cmp5, label %if.then, label %if.end
+  br i1 %cmp5, label %if.then, label %loop.latch
 
 if.then:
   %rem = srem i64 3, %stride
   %2 = trunc nuw nsw i64 %rem to i32
   %3 = mul i32 %1, %2
-  br label %if.end
+  br label %loop.latch
 
-if.end:
-  %t.0 = phi i32 [ %3, %if.then ], [ 0, %for.body ]
-  %arrayidx10 = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %i.021
+loop.latch:
+  %t.0 = phi i32 [ %3, %if.then ], [ 0, %loop.header ]
+  %arrayidx10 = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %iv
   store i32 %t.0, ptr %arrayidx10, align 4
-  %inc = add nuw nsw i64 %i.021, 1
-  %exitcond.not = icmp eq i64 %inc, 1024
-  br i1 %exitcond.not, label %exit, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %loop.header
 
 exit:
   ret void
