@@ -1020,14 +1020,23 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
 
   const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
   const SCEV *Start, *Step;
-  if (!match(IncomingSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
-                                               m_SpecificLoop(L))))
+  if (!match(IncomingSCEV, m_scev_AffineAddRec(
+                               m_Isa<SCEVConstant, SCEVUnknown>(m_SCEV(Start)),
+                               m_SCEV(Step), m_SpecificLoop(L))))
     return nullptr;
 
-  // TODO: Start value can be defined be a VPExpandSCEVRecipe after
-  // VPDerivedIVRecipe supports a general VPValue as the start value.
+  // TODO: Use VPSCEVExpander to expand Start once VPDerivedIVRecipe supports a
+  // general VPValue as the start value.
   VPIRValue *StartIRV = vputils::getVPIRValueForSCEVExpr(Plan, Start);
   if (!StartIRV)
+    return nullptr;
+
+  auto *ExtractR = cast<VPInstruction>(Op);
+  DebugLoc DL = ExtractR->getDebugLoc();
+  VPBuilder Builder(ExtractR);
+  VPValue *StepVPV =
+      VPSCEVExpander(Builder, *PSE.getSE(), DL).tryToExpand(Step);
+  if (!StepVPV)
     return nullptr;
 
   Type *StartTy = StartIRV->getType();
@@ -1035,8 +1044,6 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   InductionDescriptor::InductionKind Kind =
       StartTy->isPointerTy() ? InductionDescriptor::IK_PtrInduction
                              : InductionDescriptor::IK_IntInduction;
-  VPValue *StepVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Step);
-  VPBuilder Builder(cast<VPInstruction>(Op));
   Type *TCTy = ResumeTC->getScalarType();
   VPValue *ExitCount = Builder.createOverflowingOp(
       Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
