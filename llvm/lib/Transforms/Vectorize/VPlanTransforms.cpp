@@ -1163,8 +1163,6 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   VPValue *ExitCount = Builder.createOverflowingOp(
       Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
       {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
-  ExitCount = Builder.createScalarZExtOrTrunc(
-      ExitCount, StepVPV->getScalarType(), TCTy, DebugLoc::getUnknown());
   return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartIRV, ExitCount,
                                  StepVPV);
 }
@@ -3351,7 +3349,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
   VPValue *Index = R->getIndex();
   Type *StepTy = Step->getScalarType();
   Index = StepTy->isIntegerTy()
-              ? Builder.createScalarSExtOrTrunc(
+              ? Builder.createScalarZExtOrTrunc(
                     Index, StepTy, DebugLoc::getCompilerGenerated())
               : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
