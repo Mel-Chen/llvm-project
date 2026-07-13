@@ -7752,24 +7752,11 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
       VPBuilder Builder(LoadR);
       // Create the base pointer of strided access.
-      // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
-      // supports a general VPValue as the start value.
       VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
-      Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
-      assert(IndexTy == StrideInBytes->getScalarType() &&
-             "Stride type from SCEV must match the index type");
-      VPValue *CanIV = Builder.createScalarSExtOrTrunc(
-          VectorLoop->getCanonicalIV(), IndexTy,
-          VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
-      auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
-      auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {CanIV, StrideInBytes},
-          {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
-      auto *BasePtr = Builder.createNoWrapPtrAdd(
-          StartVPV, Offset,
-          AddRecPtr->hasNoUnsignedWrap() ? GEPNoWrapFlags::noUnsignedWrap()
-                                         : GEPNoWrapFlags::none());
+      auto *BasePtr = Builder.createDerivedIV(
+          InductionDescriptor::IK_PtrInduction, /*FPBinOp=*/nullptr, StartVPV,
+          VectorLoop->getCanonicalIV(), StrideInBytes);
 
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
