@@ -1020,26 +1020,20 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
 
   const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
   const SCEV *Start, *Step;
-  if (!match(IncomingSCEV, m_scev_AffineAddRec(
-                               m_Isa<SCEVConstant, SCEVUnknown>(m_SCEV(Start)),
-                               m_SCEV(Step), m_SpecificLoop(L))))
-    return nullptr;
-
-  // TODO: Use VPSCEVExpander to expand Start once VPDerivedIVRecipe supports a
-  // general VPValue as the start value.
-  VPIRValue *StartIRV = vputils::getVPIRValueForSCEVExpr(Plan, Start);
-  if (!StartIRV)
+  if (!match(IncomingSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
+                                               m_SpecificLoop(L))))
     return nullptr;
 
   auto *ExtractR = cast<VPInstruction>(Op);
   DebugLoc DL = ExtractR->getDebugLoc();
   VPBuilder Builder(ExtractR);
-  VPValue *StepVPV =
-      VPSCEVExpander(Builder, *PSE.getSE(), DL).tryToExpand(Step);
-  if (!StepVPV)
+  VPSCEVExpander Expander(Builder, *PSE.getSE(), DL);
+  VPValue *StartVPV = Expander.tryToExpand(Start);
+  VPValue *StepVPV = Expander.tryToExpand(Step);
+  if (!StartVPV || !StepVPV)
     return nullptr;
 
-  Type *StartTy = StartIRV->getType();
+  Type *StartTy = StartVPV->getScalarType();
   assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
   InductionDescriptor::InductionKind Kind =
       StartTy->isPointerTy() ? InductionDescriptor::IK_PtrInduction
@@ -1048,7 +1042,7 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   VPValue *ExitCount = Builder.createOverflowingOp(
       Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
       {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
-  return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartIRV, ExitCount,
+  return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartVPV, ExitCount,
                                  StepVPV);
 }
 
