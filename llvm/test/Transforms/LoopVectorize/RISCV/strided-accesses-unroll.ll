@@ -26,7 +26,7 @@ define void @negative_stride_nuw(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[INDEX]], -8
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP2]], -8
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr nuw i8, ptr [[TMP9]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP9]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP9]], i64 -8, <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP11]], i64 -8, <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]

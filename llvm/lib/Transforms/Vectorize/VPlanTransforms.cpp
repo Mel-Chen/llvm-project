@@ -7785,18 +7785,17 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           VectorLoop->getCanonicalIV(), IndexTy,
           VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
-      auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {CanIV, StrideInBytes},
-          {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
-      auto *BasePtr = Builder.createNoWrapPtrAdd(
-          StartVPV, Offset,
-          AddRecPtr->hasNoUnsignedWrap() ? GEPNoWrapFlags::noUnsignedWrap()
-                                         : GEPNoWrapFlags::none());
+      auto *Offset =
+          Builder.createOverflowingOp(Instruction::Mul, {CanIV, StrideInBytes});
+      GEPNoWrapFlags NWFlags = AddRecPtr->hasNoUnsignedWrap()
+                                   ? GEPNoWrapFlags::noUnsignedWrap()
+                                   : GEPNoWrapFlags::none();
+      auto *BasePtr = Builder.createNoWrapPtrAdd(StartVPV, Offset, NWFlags);
 
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
-          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
-          Ptr->getGEPNoWrapFlags(), Ptr->getDebugLoc());
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
+          Ptr->getDebugLoc());
 
       VPValue *Mask = LoadR->getMask();
       if (!Mask)

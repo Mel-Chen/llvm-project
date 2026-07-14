@@ -1262,13 +1262,13 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-UF2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; STRIDED-UF2:       [[SCALAR_PH]]:
 ; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[P]], %[[ENTRY]] ], [ [[P]], %[[VECTOR_MEMCHECK]] ]
-; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[P2]], %[[ENTRY]] ], [ [[P2]], %[[VECTOR_MEMCHECK]] ]
+; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[P]], %[[ENTRY]] ], [ [[P]], %[[VECTOR_MEMCHECK]] ]
+; STRIDED-UF2-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[P2]], %[[ENTRY]] ], [ [[P2]], %[[VECTOR_MEMCHECK]] ]
 ; STRIDED-UF2-NEXT:    br label %[[LOOP:.*]]
 ; STRIDED-UF2:       [[LOOP]]:
 ; STRIDED-UF2-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[NEXTI:%.*]], %[[LOOP]] ]
-; STRIDED-UF2-NEXT:    [[PTR:%.*]] = phi ptr [ [[BC_RESUME_VAL16]], %[[SCALAR_PH]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
-; STRIDED-UF2-NEXT:    [[PTR2:%.*]] = phi ptr [ [[BC_RESUME_VAL17]], %[[SCALAR_PH]] ], [ [[PTR2_NEXT:%.*]], %[[LOOP]] ]
+; STRIDED-UF2-NEXT:    [[PTR:%.*]] = phi ptr [ [[BC_RESUME_VAL15]], %[[SCALAR_PH]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
+; STRIDED-UF2-NEXT:    [[PTR2:%.*]] = phi ptr [ [[BC_RESUME_VAL16]], %[[SCALAR_PH]] ], [ [[PTR2_NEXT:%.*]], %[[LOOP]] ]
 ; STRIDED-UF2-NEXT:    [[X0:%.*]] = load i32, ptr [[PTR]], align 4
 ; STRIDED-UF2-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
 ; STRIDED-UF2-NEXT:    store i32 [[Y0]], ptr [[PTR2]], align 4
@@ -1322,7 +1322,7 @@ define void @constant_stride_reinterpret(ptr noalias %in, ptr noalias %out) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[IN]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP6]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i64, ptr [[OUT]], i64 [[INDEX]]
@@ -1353,10 +1353,10 @@ define void @constant_stride_reinterpret(ptr noalias %in, ptr noalias %out) {
 ; CHECK-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-UF2:       [[VECTOR_BODY]]:
 ; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[INDEX]], 2
+; CHECK-UF2-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-UF2-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[IN]], i64 [[TMP5]]
 ; CHECK-UF2-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP3]], 4
-; CHECK-UF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP6]], i64 [[TMP7]]
+; CHECK-UF2-NEXT:    [[TMP13:%.*]] = getelementptr nuw i8, ptr [[TMP6]], i64 [[TMP7]]
 ; CHECK-UF2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP6]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-UF2-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP13]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-UF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i64, ptr [[OUT]], i64 [[INDEX]]
@@ -1705,7 +1705,7 @@ define void @lshr_exact_stride(ptr noalias %in, ptr noalias %out) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr nuw i8, ptr [[IN]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP7]], i64 8, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr nusw i32, ptr [[OUT]], <vscale x 4 x i64> [[VEC_IND]]
