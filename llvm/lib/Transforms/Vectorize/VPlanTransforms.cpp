@@ -7785,8 +7785,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           VectorLoop->getCanonicalIV(), IndexTy,
           VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
-      auto *Offset =
-          Builder.createOverflowingOp(Instruction::Mul, {CanIV, StrideInBytes});
+      auto *Offset = Builder.createOverflowingOp(
+          Instruction::Mul, {CanIV, StrideInBytes},
+          {AddRecPtr->hasNoUnsignedWrap(), /*HasNSW=*/false});
       GEPNoWrapFlags NWFlags = AddRecPtr->hasNoUnsignedWrap()
                                    ? GEPNoWrapFlags::noUnsignedWrap()
                                    : GEPNoWrapFlags::none();

@@ -20,7 +20,7 @@ define void @scev_ptradd_strided(ptr noalias %a, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = extractelement vp<%index>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = shl vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = shl nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = ptradd nuw vp<[[VP2]]>, vp<[[VP4]]>
 ; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP6:%[0-9]+]]> = call llvm.experimental.vp.strided.load(vp<[[VP5]]>, ir<16>, ir<true>, vp<%evl>)
 ; CHECK-NEXT:    CLONE ir<%gd> = getelementptr inbounds ir<%dst>, vp<[[VP3]]>
