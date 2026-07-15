@@ -7791,7 +7791,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       GEPNoWrapFlags NWFlags = AddRecPtr->hasNoUnsignedWrap()
                                    ? GEPNoWrapFlags::noUnsignedWrap()
                                    : GEPNoWrapFlags::none();
-      auto *BasePtr = Builder.createNoWrapPtrAdd(StartVPV, Offset, NWFlags);
+      VPValue *BasePtr = Builder.createNoWrapPtrAdd(StartVPV, Offset, NWFlags);
 
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
