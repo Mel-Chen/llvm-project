@@ -351,8 +351,8 @@ define void @PR30742(ptr %p) {
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    [[TMP05:%.*]] = phi i32 [ [[BC_RESUME_VAL11]], %[[SCALAR_PH2]] ], [ [[TMP06:%.*]], %[[BB2]] ]
 ; CHECK-NEXT:    [[TMP06]] = add i32 [[TMP05]], -8
-; CHECK-NEXT:    [[TMP07:%.*]] = icmp sgt i32 [[TMP06]], 0
-; CHECK-NEXT:    br i1 [[TMP07]], label %[[BB2]], label %[[BB3]], {{!llvm.loop ![0-9]+}}
+; CHECK-NEXT:    [[LOOP1_EC:%.*]] = icmp sgt i32 [[TMP06]], 0
+; CHECK-NEXT:    br i1 [[LOOP1_EC]], label %[[BB2]], label %[[BB3]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[IV1_LCSSA:%.*]] = phi i32 [ [[TMP05]], %[[BB2]] ], [ [[IND_ESCAPE]], %[[MIDDLE_BLOCK10]] ]
 ; CHECK-NEXT:    [[TMP09:%.*]] = sub i32 [[TMP00]], 4
@@ -387,8 +387,8 @@ define void @PR30742(ptr %p) {
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], %[[BB4]] ]
 ; CHECK-NEXT:    [[IV2_NEXT]] = add i32 [[IV2]], -8
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP25]], label %[[BB4]], label %[[BB1_LOOPEXIT]], {{!llvm.loop ![0-9]+}}
+; CHECK-NEXT:    [[LOOP2_EC:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
+; CHECK-NEXT:    br i1 [[LOOP2_EC]], label %[[BB4]], label %[[BB1_LOOPEXIT]], {{!llvm.loop ![0-9]+}}
 ;
 entry:
   br label %outer
@@ -404,22 +404,22 @@ outer:
 loop1:
   %iv1 = phi i32 [ %start1, %outer ], [ %iv1.next, %loop1 ]
   %iv1.next = add i32 %iv1, -8
-  %3 = icmp sgt i32 %iv1.next, 0
-  br i1 %3, label %loop1, label %loop1.exit
+  %loop1.ec = icmp sgt i32 %iv1.next, 0
+  br i1 %loop1.ec, label %loop1, label %loop1.exit
 
 loop1.exit:
   %iv1.lcssa = phi i32 [ %iv1, %loop1 ]
-  %4 = sub i32 %n, 4
-  %5 = icmp slt i32 %4, 1
-  %6 = select i1 %5, i32 1, i32 %4
-  %start2 = add nsw i32 %6, -7
+  %3 = sub i32 %n, 4
+  %4 = icmp slt i32 %3, 1
+  %5 = select i1 %4, i32 1, i32 %3
+  %start2 = add nsw i32 %5, -7
   br label %loop2
 
 loop2:
   %iv2 = phi i32 [ %start2, %loop1.exit ], [ %iv2.next, %loop2 ]
   %iv2.next = add i32 %iv2, -8
-  %7 = icmp sgt i32 %iv2.next, 0
-  br i1 %7, label %loop2, label %outer
+  %loop2.ec = icmp sgt i32 %iv2.next, 0
+  br i1 %loop2.ec, label %loop2, label %outer
 }
 
 ;
