@@ -1029,9 +1029,13 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   VPBuilder Builder(ExtractR);
   VPSCEVExpander Expander(Builder, *PSE.getSE(), DL);
   VPValue *StartVPV = Expander.tryToExpand(Start);
-  VPValue *StepVPV = Expander.tryToExpand(Step);
-  if (!StartVPV || !StepVPV)
+  if (!StartVPV)
     return nullptr;
+  VPValue *StepVPV = Expander.tryToExpand(Step);
+  if (!StepVPV) {
+    vputils::recursivelyDeleteDeadRecipes(StartVPV);
+    return nullptr;
+  }
 
   Type *StartTy = StartVPV->getScalarType();
   assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
