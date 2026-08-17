@@ -686,7 +686,14 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
   if (!M)
     return std::nullopt;
   MemoryLocation Loc;
-  // Populate noalias metadata from VPIRMetadata.
+  // If the recipe still maps to its underlying memory instruction, start from
+  // its full location.
+  if (auto *SDR = dyn_cast<VPSingleDefRecipe>(&R))
+    if (auto *I = dyn_cast_if_present<Instruction>(SDR->getUnderlyingValue()))
+      if (auto ML = MemoryLocation::getOrNone(I))
+        Loc = *ML;
+  // Overlay noalias metadata from VPIRMetadata, which may carry loop-versioning
+  // scopes not present on the underlying instruction.
   if (MDNode *NoAliasMD = M->getMetadata(LLVMContext::MD_noalias))
     Loc.AATags.NoAlias = NoAliasMD;
   if (MDNode *AliasScopeMD = M->getMetadata(LLVMContext::MD_alias_scope))

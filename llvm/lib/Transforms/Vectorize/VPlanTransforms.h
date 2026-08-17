@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class AAResults;
 class InductionDescriptor;
 class Instruction;
 class Loop;
@@ -295,7 +296,7 @@ struct VPlanTransforms {
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
-  LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
+  LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan, AAResults *AA = nullptr);
 
   /// Remove redundant VPBasicBlocks by merging them into their single
   /// predecessor if the latter has a single successor.

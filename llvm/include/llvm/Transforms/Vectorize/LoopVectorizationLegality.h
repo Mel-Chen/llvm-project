@@ -413,6 +413,9 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
+  /// Returns the alias analysis results.
+  AAResults *getAA() const { return AA; }
+
   /// Returns information about whether this loop contains at least one
   /// uncountable early exit, and if so, if it also contains instructions (such
   /// as stores) that cause side-effects.

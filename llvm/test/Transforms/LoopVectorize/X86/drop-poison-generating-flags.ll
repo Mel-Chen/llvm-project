@@ -430,9 +430,6 @@ define void @drop_zext_nneg(ptr noalias %p, ptr noalias %p1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP3]], <4 x i1> [[TMP0]], <4 x double> poison)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x double> [[WIDE_MASKED_LOAD]], <4 x double> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[PREDPHI]], i64 3
-; CHECK-NEXT:    store double [[TMP5]], ptr [[P1]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024

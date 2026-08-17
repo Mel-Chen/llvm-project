@@ -26,6 +26,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -255,7 +256,8 @@ public:
 static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
-                               std::optional<SinkStoreInfo> SinkInfo = {}) {
+                               std::optional<SinkStoreInfo> SinkInfo = {},
+                               AAResults *AA = nullptr) {
   bool CheckReads = SinkInfo.has_value();
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
@@ -273,8 +275,17 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
-        return false;
+      // First try the cheap, metadata-only scoped-noalias check.
+      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) == AliasResult::NoAlias)
+        continue;
+
+      // Otherwise, fall back to full alias analysis using the real underlying
+      // pointers.
+      if (AA && Loc->Ptr && MemLoc.Ptr &&
+          AA->alias(*Loc, MemLoc) == AliasResult::NoAlias)
+        continue;
+
+      return false;
     }
   }
   return true;
@@ -2292,7 +2303,7 @@ void VPlanTransforms::cse(VPlan &Plan) {
 /// non-memory or memory recipe \p R out of a loop region. When sinking, passing
 /// \p Sinking = true ensures that assumes aren't sunk.
 static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
-                                    VPBasicBlock *LastBB,
+                                    VPBasicBlock *LastBB, AAResults *AA,
                                     bool Sinking = false) {
   if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
       match(&R, m_Intrinsic<Intrinsic::assume>()))
@@ -2308,11 +2319,11 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
               : std::nullopt;
 
   return !MemLoc ||
-         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
+         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo, AA);
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
-static void licm(VPlan &Plan) {
+static void licm(VPlan &Plan, AAResults *AA) {
   VPBasicBlock *Preheader = Plan.getVectorPreheader();
 
   // Hoist any loop invariant recipes from the vector loop region to the
@@ -2327,7 +2338,7 @@ static void licm(VPlan &Plan) {
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
-                                  LoopRegion->getExitingBasicBlock()))
+                                  LoopRegion->getExitingBasicBlock(), AA))
         continue;
       if (any_of(R.operands(), [](VPValue *Op) {
             return !Op->isDefinedOutsideLoopRegions();
@@ -2348,7 +2359,7 @@ static void licm(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
-                                  LoopRegion->getExitingBasicBlock(),
+                                  LoopRegion->getExitingBasicBlock(), AA,
                                   /*Sinking=*/true))
         continue;
 
@@ -2585,7 +2596,7 @@ bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   return SimplifiedPhi;
 }
 
-void VPlanTransforms::optimize(VPlan &Plan) {
+void VPlanTransforms::optimize(VPlan &Plan, AAResults *AA) {
   RUN_VPLAN_PASS(removeRedundantInductionCasts, Plan);
 
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
@@ -2603,7 +2614,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
   RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
-  RUN_VPLAN_PASS(licm, Plan);
+  RUN_VPLAN_PASS(licm, Plan, AA);
 }
 
 void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,

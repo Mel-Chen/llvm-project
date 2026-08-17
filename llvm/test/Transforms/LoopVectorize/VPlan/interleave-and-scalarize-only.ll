@@ -489,16 +489,11 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%load12> = phi ir<%a>, vp<%next.gep>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<%b> + vp<[[VP6]]> * ir<3>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<3>, vp<[[VP0]]>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<128>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP9]]>, ir<128>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<null>, vp<[[VP10]]>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = first-order splice ir<%load12>, vp<%next.gep>
-; CHECK-NEXT:      CLONE store vp<[[VP11]]>, vp<%next.gep>
-; CHECK-NEXT:      CLONE store vp<%next.gep>, ir<%inv_ptr>
-; CHECK-NEXT:      CLONE ir<%sadd_val> = add vp<[[VP8]]>, ir<3>
-; CHECK-NEXT:      CLONE store ir<%sadd_val>, ir<%inv_ptr2>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<128>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<128>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<null>, vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = first-order splice ir<%load12>, vp<%next.gep>
+; CHECK-NEXT:      CLONE store vp<[[VP9]]>, vp<%next.gep>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -506,6 +501,11 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    vp<[[VP11:%[0-9]+]]> = DERIVED-IV ir<%b> + vp<[[VP6]]> * ir<3>
+; CHECK-NEXT:    vp<[[VP12:%[0-9]+]]> = SCALAR-STEPS vp<[[VP11]]>, ir<3>, vp<[[VP0]]>
+; CHECK-NEXT:    CLONE store vp<%next.gep>, ir<%inv_ptr>
+; CHECK-NEXT:    CLONE ir<%sadd_val> = add vp<[[VP12]]>, ir<3>
+; CHECK-NEXT:    CLONE store ir<%sadd_val>, ir<%inv_ptr2>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-part vp<%next.gep>
 ; CHECK-NEXT:  Successor(s): scalar.ph
 ; CHECK-EMPTY:

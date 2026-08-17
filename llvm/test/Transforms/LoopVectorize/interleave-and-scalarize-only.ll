@@ -400,10 +400,6 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi ptr [ [[A]], %[[VECTOR_PH]] ], [ [[NEXT_GEP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDEX1]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 3
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[B]], [[TMP17]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = shl i64 [[INDEX1]], 7
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], 128
@@ -411,13 +407,17 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:    [[NEXT_GEP3]] = getelementptr i8, ptr null, i64 [[TMP12]]
 ; CHECK-NEXT:    store ptr [[VECTOR_RECUR]], ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    store ptr [[NEXT_GEP]], ptr [[NEXT_GEP3]], align 8
-; CHECK-NEXT:    store ptr [[NEXT_GEP3]], ptr [[INV_PTR]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], 3
-; CHECK-NEXT:    store i32 [[TMP13]], ptr [[INV_PTR2]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[INDEX]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDEX1]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 3
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[B]], [[TMP17]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP18]], 3
+; CHECK-NEXT:    store ptr [[NEXT_GEP3]], ptr [[INV_PTR]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP21]], 3
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[INV_PTR2]], align 8
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ]
