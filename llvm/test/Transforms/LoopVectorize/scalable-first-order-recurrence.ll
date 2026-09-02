@@ -35,9 +35,9 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
 ; CHECK-VF4UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-VF4UF1-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-VF4UF1-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP11]], 1
-; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[PRE_LOAD]], i32 [[TMP14]]
+; CHECK-VF4UF1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[PRE_LOAD]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -97,9 +97,18 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-VF4UF2-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP12]] to i32
-; CHECK-VF4UF2-NEXT:    [[TMP15:%.*]] = sub i32 [[TMP14]], 1
-; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[PRE_LOAD]], i32 [[TMP15]]
+; CHECK-VF4UF2-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-VF4UF2-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 4
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP21]], 1
+; CHECK-VF4UF2-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[FIRST_INACTIVE_LANE]]
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP21]], 0
+; CHECK-VF4UF2-NEXT:    [[TMP28:%.*]] = add i64 [[TMP16]], [[FIRST_INACTIVE_LANE3]]
+; CHECK-VF4UF2-NEXT:    [[TMP29:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE3]], [[TMP21]]
+; CHECK-VF4UF2-NEXT:    [[TMP30:%.*]] = select i1 [[TMP29]], i64 [[TMP28]], i64 [[TMP15]]
+; CHECK-VF4UF2-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP30]], 1
+; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[PRE_LOAD]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -186,9 +195,9 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
 ; CHECK-VF4UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-VF4UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-VF4UF1-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-VF4UF1-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 1
-; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[DOTPRE]], i32 [[TMP8]]
+; CHECK-VF4UF1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[DOTPRE]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -241,9 +250,18 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP11]] to i32
-; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP8]], 1
-; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[DOTPRE]], i32 [[TMP7]]
+; CHECK-VF4UF2-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP21]], 4
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 1
+; CHECK-VF4UF2-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], [[FIRST_INACTIVE_LANE]]
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP7]], 0
+; CHECK-VF4UF2-NEXT:    [[TMP23:%.*]] = add i64 [[TMP22]], [[FIRST_INACTIVE_LANE1]]
+; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], [[TMP7]]
+; CHECK-VF4UF2-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP23]], i64 [[TMP9]]
+; CHECK-VF4UF2-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP13]], 1
+; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[DOTPRE]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -355,9 +373,9 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-VF4UF1-NEXT:    [[TMP15:%.*]] = add i64 1, [[N_VEC]]
-; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-VF4UF1-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP12]], 1
-; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP0]], i32 [[TMP13]]
+; CHECK-VF4UF1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP0]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x double> poison, double [[CONV1]], i64 0
 ; CHECK-VF4UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x double> [[BROADCAST_SPLATINSERT]], <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VF4UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -429,9 +447,18 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-VF4UF2-NEXT:    [[TMP15:%.*]] = add i64 1, [[N_VEC]]
-; CHECK-VF4UF2-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP13]] to i32
-; CHECK-VF4UF2-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP16]], 1
-; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP0]], i32 [[TMP14]]
+; CHECK-VF4UF2-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-VF4UF2-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP21]], 4
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP14]], 1
+; CHECK-VF4UF2-NEXT:    [[TMP16:%.*]] = add i64 [[TMP22]], [[FIRST_INACTIVE_LANE]]
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP14]], 0
+; CHECK-VF4UF2-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], [[FIRST_INACTIVE_LANE4]]
+; CHECK-VF4UF2-NEXT:    [[TMP23:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE4]], [[TMP14]]
+; CHECK-VF4UF2-NEXT:    [[TMP36:%.*]] = select i1 [[TMP23]], i64 [[TMP18]], i64 [[TMP16]]
+; CHECK-VF4UF2-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP36]], 1
+; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP0]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x double> poison, double [[CONV1]], i64 0
 ; CHECK-VF4UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x double> [[BROADCAST_SPLATINSERT]], <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VF4UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -710,9 +737,9 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
 ; CHECK-VF4UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-VF4UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-VF4UF1-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], 1
-; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[DOTPRE]], i32 [[TMP6]]
+; CHECK-VF4UF1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[DOTPRE]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -765,9 +792,18 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP7]] to i32
-; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP6]], 1
-; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[DOTPRE]], i32 [[TMP8]]
+; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-VF4UF2-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP6]], 4
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP15]], 1
+; CHECK-VF4UF2-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], [[FIRST_INACTIVE_LANE]]
+; CHECK-VF4UF2-NEXT:    [[FIRST_INACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> zeroinitializer, i1 false)
+; CHECK-VF4UF2-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP15]], 0
+; CHECK-VF4UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], [[FIRST_INACTIVE_LANE3]]
+; CHECK-VF4UF2-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE3]], [[TMP15]]
+; CHECK-VF4UF2-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i64 [[TMP11]], i64 [[TMP9]]
+; CHECK-VF4UF2-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP17]], 1
+; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[DOTPRE]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-VF4UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

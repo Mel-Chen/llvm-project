@@ -133,10 +133,13 @@ define i64 @partial_reduce_sub_sext_mul(ptr %x) #1 {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       vector.ph:
+; CHECK-INTERLEAVE1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-INTERLEAVE1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 0, i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[STRIDED_VEC:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[STRIDED_VEC:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = getelementptr [2 x i32], ptr [[X]], i64 [[TMP0]]
@@ -162,10 +165,26 @@ define i64 @partial_reduce_sub_sext_mul(ptr %x) #1 {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVED:       vector.ph:
+; CHECK-INTERLEAVED-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = add i64 12, [[FIRST_INACTIVE_LANE]]
+; CHECK-INTERLEAVED-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = add i64 8, [[FIRST_INACTIVE_LANE1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP26:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 4
+; CHECK-INTERLEAVED-NEXT:    [[TMP33:%.*]] = select i1 [[TMP26]], i64 [[TMP22]], i64 [[TMP18]]
+; CHECK-INTERLEAVED-NEXT:    [[FIRST_INACTIVE_LANE2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-INTERLEAVED-NEXT:    [[TMP34:%.*]] = add i64 4, [[FIRST_INACTIVE_LANE2]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP35:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE2]], 4
+; CHECK-INTERLEAVED-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], i64 [[TMP34]], i64 [[TMP33]]
+; CHECK-INTERLEAVED-NEXT:    [[FIRST_INACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE3]], 4
+; CHECK-INTERLEAVED-NEXT:    [[TMP39:%.*]] = select i1 [[TMP38]], i64 [[TMP37]], i64 [[TMP36]]
+; CHECK-INTERLEAVED-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP39]], 1
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 0, i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[STRIDED_VEC3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[STRIDED_VEC3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE10:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE11:%.*]], [[VECTOR_BODY]] ]
@@ -227,10 +246,13 @@ define i64 @partial_reduce_sub_sext_mul(ptr %x) #1 {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
+; CHECK-MAXBW-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-MAXBW-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 0, i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[STRIDED_VEC:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[STRIDED_VEC:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = getelementptr [2 x i32], ptr [[X]], i64 [[TMP0]]

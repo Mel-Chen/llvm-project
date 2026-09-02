@@ -199,6 +199,11 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
         match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
       continue;
 
+    // An all-true mask is trivially a prefix mask (every lane up to VF is
+    // active).
+    if (match(Mask, m_True()))
+      continue;
+
     CmpPredicate Pred;
     VPValue *LHS, *RHS;
     if (match(Mask, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&

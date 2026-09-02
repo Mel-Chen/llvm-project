@@ -1046,7 +1046,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub vp<[[VP0]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = last-active-lane ir<true>
 ; CHECK-NEXT:    EMIT vp<%vector.recur.init> = insertelement ir<poison>, ir<0>, vp<[[VP5]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:

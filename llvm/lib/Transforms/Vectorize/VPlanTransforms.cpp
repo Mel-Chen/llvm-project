@@ -4276,14 +4276,8 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
       DebugLoc DL = FOR->getDebugLoc();
       VPValue *Poison =
           Plan.getOrAddLiveIn(PoisonValue::get(StartV->getScalarType()));
-      // TODO: Use the type of runtimeVF as index type.
-      Type *IdxTy = Type::getInt32Ty(Plan.getContext());
-      VPValue *RuntimeVF =
-          PHBuilder.createScalarZExtOrTrunc(&Plan.getVF(), IdxTy, DL);
-      // TODO: Set nowrap flag for LastIdx.
-      VPValue *LastIdx = PHBuilder.createOverflowingOp(
-          Instruction::Sub, {RuntimeVF, Plan.getConstantInt(IdxTy, 1)},
-          {false, false}, DL);
+      VPValue *LastIdx =
+          PHBuilder.createLastActiveLane({Plan.getTrue()}, DL);
       VPValue *NewStart = PHBuilder.createNaryOp(Instruction::InsertElement,
                                                  {Poison, StartV, LastIdx}, DL,
                                                  "vector.recur.init");

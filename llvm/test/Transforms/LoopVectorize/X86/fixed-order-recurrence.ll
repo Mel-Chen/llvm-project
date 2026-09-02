@@ -19,7 +19,14 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 1, [[N_VEC]]
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE]], i32 15
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 16, [[FIRST_INACTIVE_LANE]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 16
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP5]], i64 [[TMP4]], i64 [[TMP12]]
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP13]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -108,9 +115,16 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 3, [[N_VEC]]
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE45]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT1:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE44]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT3:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE]], i32 15
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 16, [[FIRST_INACTIVE_LANE]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 16
+; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP5]], i64 [[TMP4]], i64 [[TMP20]]
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP21]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE45]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT1:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE44]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT3:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -286,10 +300,18 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 4, [[FIRST_INACTIVE_LANE]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 [[TMP4]]
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP10]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 1, i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 1>, [[VECTOR_PH]] ], [ [[STEP_ADD:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[STEP_ADD:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 1, i32 2, i32 3, i32 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>

@@ -13,12 +13,15 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; VF2IC1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; VF2IC1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <2 x i32> poison, i32 33, i64 [[LAST_ACTIVE_LANE]]
 ; VF2IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF2IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC1:       [[VECTOR_BODY]]:
 ; VF2IC1-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC1-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC1-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; VF2IC1-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP4]]
@@ -49,12 +52,20 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 3
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; VF2IC2-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 2, [[FIRST_INACTIVE_LANE]]
+; VF2IC2-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC2-NEXT:    [[TMP2:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE1]]
+; VF2IC2-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 2
+; VF2IC2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[TMP2]], i64 [[TMP1]]
+; VF2IC2-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP11]], 1
+; VF2IC2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <2 x i32> poison, i32 33, i64 [[LAST_ACTIVE_LANE]]
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF2IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -190,12 +201,15 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; VF2IC1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; VF2IC1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <2 x i32> poison, i32 33, i64 [[LAST_ACTIVE_LANE]]
 ; VF2IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF2IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC1:       [[VECTOR_BODY]]:
 ; VF2IC1-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC1-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC1-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; VF2IC1-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP4]]
@@ -226,12 +240,20 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 3
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; VF2IC2-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 2, [[FIRST_INACTIVE_LANE]]
+; VF2IC2-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC2-NEXT:    [[TMP2:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE1]]
+; VF2IC2-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 2
+; VF2IC2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[TMP2]], i64 [[TMP1]]
+; VF2IC2-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP11]], 1
+; VF2IC2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <2 x i32> poison, i32 33, i64 [[LAST_ACTIVE_LANE]]
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF2IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -367,12 +389,15 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; VF2IC1-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC1-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; VF2IC1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <2 x i32> poison, i32 33, i64 [[LAST_ACTIVE_LANE]]
 ; VF2IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF2IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC1:       [[VECTOR_BODY]]:
 ; VF2IC1-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC1-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC1-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; VF2IC1-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP4]]
@@ -405,12 +430,20 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 3
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; VF2IC2-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 2, [[FIRST_INACTIVE_LANE]]
+; VF2IC2-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> zeroinitializer, i1 false)
+; VF2IC2-NEXT:    [[TMP2:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE1]]
+; VF2IC2-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 2
+; VF2IC2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[TMP2]], i64 [[TMP1]]
+; VF2IC2-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP11]], 1
+; VF2IC2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <2 x i32> poison, i32 33, i64 [[LAST_ACTIVE_LANE]]
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF2IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]

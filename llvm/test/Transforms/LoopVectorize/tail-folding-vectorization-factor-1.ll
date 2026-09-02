@@ -150,13 +150,29 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP34:%.*]] = add i64 12, [[FIRST_INACTIVE_LANE4]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP35:%.*]] = add i64 8, [[FIRST_INACTIVE_LANE5]]
+; CHECK-NEXT:    [[TMP36:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE5]], 4
+; CHECK-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i64 [[TMP35]], i64 [[TMP34]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP38:%.*]] = add i64 4, [[FIRST_INACTIVE_LANE6]]
+; CHECK-NEXT:    [[TMP39:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE6]], 4
+; CHECK-NEXT:    [[TMP40:%.*]] = select i1 [[TMP39]], i64 [[TMP38]], i64 [[TMP37]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> zeroinitializer, i1 false)
+; CHECK-NEXT:    [[TMP41:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE7]]
+; CHECK-NEXT:    [[TMP42:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE7]], 4
+; CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i64 [[TMP41]], i64 [[TMP40]]
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP43]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i64> poison, i64 0, i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, [[VECTOR_PH]] ], [ [[STEP_ADD_3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[STEP_ADD_3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_3]] = add nuw <4 x i64> [[STEP_ADD_2]], splat (i64 4)

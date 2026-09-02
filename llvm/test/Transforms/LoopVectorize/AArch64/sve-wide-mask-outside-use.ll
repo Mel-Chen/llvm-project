@@ -15,9 +15,9 @@ define i64 @scalable_wide_lane_mask_outside_use(ptr noalias %dst, ptr readonly %
 ; CHECK-UF1:       vector.ph:
 ; CHECK-UF1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-UF1-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-UF1-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], 1
-; CHECK-UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 0, i32 [[TMP3]]
+; CHECK-UF1-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> zeroinitializer, i1 false)
+; CHECK-UF1-NEXT:    [[LAST_ACTIVE_LANE1:%.*]] = sub i64 [[FIRST_INACTIVE_LANE1]], 1
+; CHECK-UF1-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 0, i64 [[LAST_ACTIVE_LANE1]]
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
 ; CHECK-UF1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF1:       vector.body:
@@ -57,9 +57,28 @@ define i64 @scalable_wide_lane_mask_outside_use(ptr noalias %dst, ptr readonly %
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-UF4-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-UF4-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], 1
-; CHECK-UF4-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 0, i32 [[TMP4]]
+; CHECK-UF4-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-UF4-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; CHECK-UF4-NEXT:    [[FIRST_INACTIVE_LANE4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> zeroinitializer, i1 false)
+; CHECK-UF4-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 3
+; CHECK-UF4-NEXT:    [[TMP65:%.*]] = add i64 [[TMP5]], [[FIRST_INACTIVE_LANE4]]
+; CHECK-UF4-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> zeroinitializer, i1 false)
+; CHECK-UF4-NEXT:    [[TMP66:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-UF4-NEXT:    [[TMP67:%.*]] = add i64 [[TMP66]], [[FIRST_INACTIVE_LANE1]]
+; CHECK-UF4-NEXT:    [[TMP68:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], [[TMP4]]
+; CHECK-UF4-NEXT:    [[TMP69:%.*]] = select i1 [[TMP68]], i64 [[TMP67]], i64 [[TMP65]]
+; CHECK-UF4-NEXT:    [[FIRST_INACTIVE_LANE2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> zeroinitializer, i1 false)
+; CHECK-UF4-NEXT:    [[TMP70:%.*]] = mul i64 [[TMP4]], 1
+; CHECK-UF4-NEXT:    [[TMP71:%.*]] = add i64 [[TMP70]], [[FIRST_INACTIVE_LANE2]]
+; CHECK-UF4-NEXT:    [[TMP72:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE2]], [[TMP4]]
+; CHECK-UF4-NEXT:    [[TMP73:%.*]] = select i1 [[TMP72]], i64 [[TMP71]], i64 [[TMP69]]
+; CHECK-UF4-NEXT:    [[FIRST_INACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> zeroinitializer, i1 false)
+; CHECK-UF4-NEXT:    [[TMP74:%.*]] = mul i64 [[TMP4]], 0
+; CHECK-UF4-NEXT:    [[TMP75:%.*]] = add i64 [[TMP74]], [[FIRST_INACTIVE_LANE3]]
+; CHECK-UF4-NEXT:    [[TMP76:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE3]], [[TMP4]]
+; CHECK-UF4-NEXT:    [[TMP77:%.*]] = select i1 [[TMP76]], i64 [[TMP75]], i64 [[TMP73]]
+; CHECK-UF4-NEXT:    [[LAST_ACTIVE_LANE1:%.*]] = sub i64 [[TMP77]], 1
+; CHECK-UF4-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 0, i64 [[LAST_ACTIVE_LANE1]]
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[N]])
 ; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 0)
 ; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 2)
