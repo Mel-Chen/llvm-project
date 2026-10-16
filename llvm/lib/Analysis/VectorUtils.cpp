@@ -1735,7 +1735,7 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   // Release groups requiring scalar epilogues. Note that this also removes them
   // from InterleaveGroups.
   bool ReleasedGroup = InterleaveGroups.remove_if([&](auto *Group) {
-    if (!Group->requiresScalarEpilogue())
+    if (!Group->hasTailGap())
       return false;
     LLVM_DEBUG(
         dbgs()

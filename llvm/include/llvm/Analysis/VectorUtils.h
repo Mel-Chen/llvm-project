@@ -638,10 +638,9 @@ public:
   /// noalias info from all members.
   void addMetadata(InstTy *NewInst) const;
 
-  /// Returns true if this Group requires a scalar iteration to handle gaps.
-  bool requiresScalarEpilogue() const {
-    // If the last member of the Group exists, then a scalar epilog is not
-    // needed for this group.
+  /// Returns true if this group has a gap at the end.
+  bool hasTailGap() const {
+    // If the last member of the group exists, then there is no tail gap.
     if (getMember(getFactor() - 1))
       return false;
 
@@ -649,7 +648,6 @@ public:
     // because such groups get invalidated (TODO).
     assert(!isReverse() && "Group should have been invalidated");
 
-    // This is a group of loads, with gaps, and without a last-member
     return true;
   }
 
