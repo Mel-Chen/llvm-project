@@ -1379,6 +1379,55 @@ exit:
   ret i64 %spec.select7
 }
 
+define i64 @smax_idx_non_const_iv_start(ptr %a, i64 %iv.start, i64 %n) {
+; CHECK-LABEL: define i64 @smax_idx_non_const_iv_start(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[IV_START:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp slt i64 [[IV_START]], [[N]]
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[FOR_BODY_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[IV_START]], %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[IDX_PHI:%.*]] = phi i64 [ [[IDX:%.*]], %[[FOR_BODY]] ], [ -1, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[MAX_PHI:%.*]] = phi i32 [ [[MAX:%.*]], %[[FOR_BODY]] ], [ -1000000, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[L]], [[MAX_PHI]]
+; CHECK-NEXT:    [[MAX]] = tail call i32 @llvm.smax.i32(i32 [[L]], i32 [[MAX_PHI]])
+; CHECK-NEXT:    [[IDX]] = select i1 [[CMP]], i64 [[IV]], i64 [[IDX_PHI]]
+; CHECK-NEXT:    [[INC]] = add nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i64 [ [[IDX]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[IDX_LCSSA]], %[[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %guard = icmp slt i64 %iv.start, %n
+  br i1 %guard, label %for.body, label %exit
+
+for.body:
+  %iv = phi i64 [ %inc, %for.body ], [ %iv.start, %entry ]
+  %idx.phi = phi i64 [ %idx, %for.body ], [ -1, %entry ]
+  %max.phi = phi i32 [ %max, %for.body ], [ -1000000, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %l = load i32, ptr %arrayidx, align 4
+  %cmp = icmp sgt i32 %l, %max.phi
+  %max = tail call i32 @llvm.smax.i32(i32 %l, i32 %max.phi)
+  %idx = select i1 %cmp, i64 %iv, i64 %idx.phi
+  %inc = add nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  %res = phi i64 [ -1, %entry ], [ %idx, %for.body ]
+  ret i64 %res
+}
+
 ;
 ; The operands of smax intrinsic and icmp are not the same to be recognized as MMI.
 ;
