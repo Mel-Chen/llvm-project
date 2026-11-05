@@ -6434,16 +6434,25 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan, ORE,
-                      OrigLoop))
+                      OrigLoop)) {
+    LLVM_DEBUG(dbgs() << "LV: Bailing out of VPlan construction: "
+                         "handleMultiUseReductions failed.\n");
     return nullptr;
+  }
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan)) {
+    LLVM_DEBUG(dbgs() << "LV: Bailing out of VPlan construction: "
+                         "handleMaxMinNumReductions failed.\n");
     return nullptr;
+  }
 
   // Create whole-vector selects for find-last recurrences.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan)) {
+    LLVM_DEBUG(dbgs() << "LV: Bailing out of VPlan construction: "
+                         "handleFindLastReductions failed.\n");
     return nullptr;
+  }
 
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 

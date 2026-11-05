@@ -2323,8 +2323,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     auto *MinOrMaxBackedgeR =
         dyn_cast<VPRecipeWithIRFlags>(MinOrMaxPhiR->getBackedgeValue());
-    if (!MinOrMaxBackedgeR)
+    if (!MinOrMaxBackedgeR) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": MinOrMaxBackedgeR is not a VPRecipeWithIRFlags\n");
       return false;
+    }
 
     // If the tail was folded then the backedge won't be the
     // reduction-intrinsic but the select in the vector.latch block that wraps
@@ -2335,19 +2338,31 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     if (HeaderMask) {
       if (!match(MinOrMaxBackedgeR, m_SelectLike(m_Specific(HeaderMask),
                                                  m_VPValue(MinOrMaxTailfold),
-                                                 m_Specific(MinOrMaxPhiR))))
+                                                 m_Specific(MinOrMaxPhiR)))) {
+        LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                          << ": tailfold backedge is not the expected "
+                             "header-mask select\n");
         return false;
+      }
 
       MinOrMaxOp = dyn_cast<VPRecipeWithIRFlags>(MinOrMaxTailfold);
-      if (!MinOrMaxOp)
+      if (!MinOrMaxOp) {
+        LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                          << ": tailfold MinOrMaxOp is not a "
+                             "VPRecipeWithIRFlags\n");
         return false;
+      }
     }
 
     // Check that MinOrMaxOp is a VPWidenIntrinsicRecipe or
     // VPReplicateRecipe with an intrinsic that matches the reduction kind.
     Intrinsic::ID ExpectedIntrinsicID = getMinMaxReductionIntrinsicOp(RdxKind);
-    if (!match(MinOrMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
+    if (!match(MinOrMaxOp, m_Intrinsic(ExpectedIntrinsicID))) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": MinOrMaxOp is not the expected min/max "
+                           "intrinsic\n");
       return false;
+    }
 
     // Tailfolded MinOrMaxOp should only feed into the predicated
     // select MinOrMaxBackedgeR.
@@ -2365,17 +2380,35 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       MinOrMaxOpValue = MinOrMaxOp->getOperand(1);
     else if (MinOrMaxOp->getOperand(1) == MinOrMaxPhiR)
       MinOrMaxOpValue = MinOrMaxOp->getOperand(0);
-    else
+    else {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": MinOrMaxOp does not combine MinOrMaxPhiR "
+                           "directly (multi-step min/max chain)\n");
       return false;
+    }
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
     auto *Cmp = findSingleUser<VPRecipeWithIRFlags>(
         MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB)));
-    if (!Cmp || Cmp->getNumUsers() != 1 ||
-        (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
+    if (!Cmp) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": MinOrMaxPhiR has no single compare user\n");
       return false;
+    }
+    if (Cmp->getNumUsers() != 1) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": Cmp has " << Cmp->getNumUsers()
+                        << " users, expected exactly 1\n");
+      return false;
+    }
+    if (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": neither Cmp operand matches the min/max operand "
+                           "(MinOrMaxOpValue)\n");
+      return false;
+    }
 
     if (MinOrMaxOpValue != CmpOpB)
       Pred = CmpInst::getSwappedPredicate(Pred);
@@ -2385,8 +2418,12 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // * Cmp (that's part of a FindLastIV chain).
     // Also an additional third user if it is tailfolded:
     // * Predicated HEADER-MASK select in the vector.latch block.
-    if (MinOrMaxPhiR->getNumUsers() != (HeaderMask ? 3 : 2))
+    if (MinOrMaxPhiR->getNumUsers() != (HeaderMask ? 3 : 2)) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": MinOrMaxPhiR has unexpected number of users ("
+                        << MinOrMaxPhiR->getNumUsers() << ")\n");
       return false;
+    }
 
     VPInstruction *MinOrMaxResult =
         findSingleUser<VPInstruction::ComputeReductionResult>(
@@ -2399,8 +2436,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     VPValue *IVOp, *FindIV;
     if (!Sel || (Sel->getNumUsers() != (HeaderMask ? 1 : 2)) ||
         !match(Sel,
-               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
+               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV)))) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": Cmp is not used by a FindLastIV-chain select\n");
       return false;
+    }
 
     if (!isa<VPReductionPHIRecipe>(FindIV)) {
       std::swap(FindIV, IVOp);
@@ -2409,8 +2449,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
     if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
-                           FindIVPhiR->getRecurrenceKind()))
+                           FindIVPhiR->getRecurrenceKind())) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": FindIV is not a FindIV reduction phi\n");
       return false;
+    }
 
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
@@ -2424,13 +2467,21 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
            "must be able to retrieve the FindIVResult VPInstruction");
     RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
     if (FindIVMinMaxKind != RecurKind::SMax &&
-        FindIVMinMaxKind != RecurKind::UMax)
+        FindIVMinMaxKind != RecurKind::UMax) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": FindIV reduction is not a FindLast (SMax/UMax) "
+                           "pattern\n");
       return false;
+    }
 
     // TODO: Support cases where IVOp is the IV increment.
     if (!match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) ||
-        !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
+        !isa<VPWidenIntOrFpInductionRecipe>(IVOp)) {
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": index select operand is not a (trunc of a) "
+                           "widened induction variable\n");
       return false;
+    }
 
     // Check if the predicate is compatible with the reduction kind.
     bool IsValidKindPred = [RdxKind, Pred]() {
@@ -2469,14 +2520,21 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
                << CmpInst::getPredicateName(Pred)
                << " incompatible with reduction kind";
       });
+      LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                        << ": predicate " << CmpInst::getPredicateName(Pred)
+                        << " incompatible with reduction kind\n");
       return false;
     }
 
     if (RdxKind == RecurKind::FMaximumNum ||
         RdxKind == RecurKind::FMinimumNum) {
       auto *StartC = dyn_cast<VPConstant>(MinOrMaxPhiR->getStartValue());
-      if (!StartC || StartC->getConstant()->isNaN())
+      if (!StartC || StartC->getConstant()->isNaN()) {
+        LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                          << ": FMaximumNum/FMinimumNum start value is not a "
+                             "non-NaN constant\n");
         return false;
+      }
     }
 
     auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
@@ -2494,8 +2552,12 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
                                   cast<VPWidenIntOrFpInductionRecipe>(IVOp),
                                   MinOrMaxResult, FindIVSelect, FindIVCmp,
-                                  FindIVRdxResult))
+                                  FindIVRdxResult)) {
+        LLVM_DEBUG(dbgs() << "LV: handleMultiUseReductions bail @" << __LINE__
+                          << ": handleFirstArgMinOrMax (strict-predicate "
+                             "argmin/argmax) failed\n");
         return false;
+      }
       continue;
     }
 
