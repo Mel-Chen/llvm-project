@@ -2336,8 +2336,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       return true;
 
     return (WideningDecision == CM_Widen ||
-            WideningDecision == CM_Widen_Reverse ||
-            WideningDecision == CM_Interleave);
+            WideningDecision == CM_Widen_Reverse);
   };
 
   // Returns true if Ptr is the pointer operand of a memory access instruction
@@ -5319,13 +5318,21 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   if (Opts.force_target_instruction_cost)
     return Cost;
 
+  SmallPtrSet<Instruction *, 8> NotUniform;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
+    for (VPSingleDefRecipe &Def : make_isa_range<VPSingleDefRecipe>(*VPBB))
+      if (auto *UI = dyn_cast_or_null<Instruction>(Def.getUnderlyingValue()))
+        if (!vputils::onlyFirstLaneUsed(&Def))
+          NotUniform.insert(UI);
   // Pre-compute costs for instructions that are forced-scalar or profitable to
   // scalarize. For most such instructions, their scalarization costs are
   // accounted for here using the legacy cost model. However, some opcodes
   // are excluded from these precomputed scalarization costs and are instead
   // modeled later by the VPlan cost model (see UseVPlanCostModel below).
   for (Instruction *ForcedScalar : CostCtx.CM.ForcedScalars[VF]) {
-    if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
+    if (!NotUniform.contains(ForcedScalar) ||
+        CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(ForcedScalar);
     InstructionCost ForcedCost = CostCtx.getLegacyCost(ForcedScalar, VF);
@@ -6447,6 +6454,12 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, PlanCM.isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   // Widened calls may only use the first lane of some operands.
@@ -6464,13 +6477,13 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
     // All types but VPInstructions are already widened and don't need extra
     // processing. We process VPInstructions below.
     assert(
-        all_of(
-            make_range(VPBB->getFirstNonPhi(), VPBB->end()),
-            IsaPred<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
-                    VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
-                    VPWidenCallRecipe, VPWidenIntrinsicRecipe,
-                    VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                    VPHistogramRecipe, VPInstruction>) &&
+        all_of(make_range(VPBB->getFirstNonPhi(), VPBB->end()),
+               IsaPred<VPWidenCanonicalIVRecipe, VPBlendRecipe,
+                       VPReductionRecipe, VPReplicateRecipe, VPWidenLoadRecipe,
+                       VPWidenStoreRecipe, VPInterleaveRecipe,
+                       VPWidenCallRecipe, VPWidenIntrinsicRecipe,
+                       VPVectorPointerRecipe, VPVectorEndPointerRecipe,
+                       VPHistogramRecipe, VPInstruction>) &&
         "Unexpected recipe");
     for (VPInstruction &VPI :
          make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
@@ -6535,12 +6548,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // Create whole-vector selects for find-last recurrences.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, PlanCM.isEpilogueAllowed());
 
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 

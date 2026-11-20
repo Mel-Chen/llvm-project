@@ -22,18 +22,20 @@ define void @ig_factor2(ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%mul> = shl nuw nsw ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT ir<%gep.src.0> = getelementptr inbounds ir<%src>, ir<%mul>
-; CHECK-NEXT:      WIDEN ir<%l.0> = load ir<%gep.src.0>, align 4
-; CHECK-NEXT:      EMIT ir<%add.1> = or disjoint ir<%mul>, ir<1>
-; CHECK-NEXT:      EMIT ir<%gep.src.1> = getelementptr inbounds ir<%src>, ir<%add.1>
-; CHECK-NEXT:      WIDEN ir<%l.1> = load ir<%gep.src.1>, align 4
+; CHECK-NEXT:      CLONE ir<%mul> = shl nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      CLONE ir<%gep.src.0> = getelementptr inbounds ir<%src>, ir<%mul>
+; CHECK-NEXT:      INTERLEAVE-GROUP with factor 2, ir<%gep.src.0>
+; CHECK-NEXT:        ir<%l.0> = load from index 0
+; CHECK-NEXT:        ir<%l.1> = load from index 1
+; CHECK-NEXT:      CLONE ir<%add.1> = or disjoint ir<%mul>, ir<1>
+; CHECK-NEXT:      CLONE ir<%gep.src.1> = getelementptr inbounds ir<%src>, ir<%add.1>
 ; CHECK-NEXT:      EMIT ir<%sum> = add ir<%l.0>, ir<%l.1>
 ; CHECK-NEXT:      EMIT ir<%sub> = sub ir<%l.0>, ir<%l.1>
-; CHECK-NEXT:      EMIT ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%mul>
-; CHECK-NEXT:      WIDEN store ir<%gep.dst.0>, ir<%sum>, align 4
-; CHECK-NEXT:      EMIT ir<%gep.dst.1> = getelementptr inbounds ir<%dst>, ir<%add.1>
-; CHECK-NEXT:      WIDEN store ir<%gep.dst.1>, ir<%sub>, align 4
+; CHECK-NEXT:      CLONE ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%mul>
+; CHECK-NEXT:      CLONE ir<%gep.dst.1> = getelementptr inbounds ir<%dst>, ir<%add.1>
+; CHECK-NEXT:      INTERLEAVE-GROUP with factor 2, ir<%gep.dst.0>
+; CHECK-NEXT:        store ir<%sum> to index 0
+; CHECK-NEXT:        store ir<%sub> to index 1
 ; CHECK-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
